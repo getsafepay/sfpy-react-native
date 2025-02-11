@@ -1,5 +1,5 @@
 module.exports = {
-    presets: ['module:metro-react-native-babel-preset'],
+    presets: ['module:metro-react-native-babel-preset', 'module:react-native-dotenv'],
     plugins: [
         [
             'module-resolver',
@@ -10,6 +10,14 @@ module.exports = {
                     "@": "./",
                 }
             }
-        ]
+        ],
+        ['module:react-native-dotenv', {
+            "moduleName": "@env",
+            "path": process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development',
+            "blacklist": null,
+            "whitelist": null,
+            "safe": false,
+            "allowUndefined": true
+        }]
     ]
 };

@@ -7,7 +7,8 @@ import React, { useContext, useRef } from 'react';
 import { View } from 'react-native';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 
-const DROPS_URL = "";
+
+const DROPS_URL = process.env.DROPS_URL;
 const THREEDS_URL = `${DROPS_URL}/threeds`;
 const DEVICE_URL = `${DROPS_URL}/device`;
 const SUCCESS_URL = `${THREEDS_URL}/success`;
