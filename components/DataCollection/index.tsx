@@ -4,7 +4,7 @@ import { useAuthenticatedSafepay, useOnSafepayError } from '@/hooks';
 import { EnrollmentResponse } from '@/types';
 import Safepay from "@sfpy/node-core";
 import React, { useContext, useRef } from 'react';
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 
 
@@ -16,7 +16,7 @@ const FAILURE_URL = `${THREEDS_URL}/failure`;
 
 const DataCollection = ({
 
-    }: {
+}: {
 
     }) => {
 
@@ -191,7 +191,11 @@ const DataCollection = ({
     }, [sendDeviceDataCollectionDetails, doEnrollment]);
 
     return (
-        <View>
+        <View
+            style={{
+                flex: 1
+            }}
+        >
             {
                 loading ?
                     <View
@@ -203,7 +207,7 @@ const DataCollection = ({
                         }}
 
                     >
-                        {/*<Spinner />*/}
+                        <Text>Loading...</Text>
                     </View> :
                     <View
                         style={{
