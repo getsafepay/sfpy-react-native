@@ -1,7 +1,7 @@
 import { SafepayContext } from '@/contexts/SafepayContext';
 import { EnrollmentAuthenticationStatus } from '@/enums';
 import { useAuthenticatedSafepay, useOnSafepayError } from '@/hooks';
-import { EnrollmentResponse } from '@/types';
+import { CardinalMessage, CardinalMessageDetail, EnrollmentResponse, TrackerAuthenticationResponse } from '@/types';
 import Safepay from "@sfpy/node-core";
 import React, { useContext, useRef } from 'react';
 import { Text, View } from 'react-native';
@@ -15,10 +15,18 @@ const SUCCESS_URL = `${THREEDS_URL}/success`;
 const FAILURE_URL = `${THREEDS_URL}/failure`;
 
 const DataCollection = ({
-
+    onAuthentication,
+    onEnrollment,
+    onCardinalSuccess,
+    onCardinalError,
+    onSafepayApiError
 }: {
-
-    }) => {
+    onAuthentication?: (data: TrackerAuthenticationResponse) => void;
+    onEnrollment?: (status: EnrollmentAuthenticationStatus) => void;
+    onSafepayApiError?: (error?: Safepay.errors.SafepayError | undefined) => void;
+    onCardinalSuccess?: (data: CardinalMessage) => void;
+    onCardinalError?: (data: CardinalMessage) => void;
+}) => {
 
     const webViewRef = useRef<WebView>(null);
 
@@ -69,12 +77,8 @@ const DataCollection = ({
 
     const safepay = useAuthenticatedSafepay("");
     const { onSafepayError } = useOnSafepayError({
-        errorCallback: () => navigateBackToHome()
+        errorCallback: onSafepayApiError
     });
-
-    const navigateBackToHome = React.useCallback(() => {
-        // Navigate back to the home screen
-    }, []);
 
     const [webViewUri, setWebViewUri] = React.useState<string>(DEVICE_URL);
 
@@ -95,8 +99,8 @@ const DataCollection = ({
                     do_capture: false
                 }
             }
-        }).then((data: any) => {
-            navigateBackToHome();
+        }).then((data: TrackerAuthenticationResponse) => {
+            onAuthentication && onAuthentication(data);
             setLoading(false);
         }).catch((error: Safepay.errors.SafepayError) => {
             onSafepayError(error);
@@ -126,7 +130,9 @@ const DataCollection = ({
                 }
             }
         }).then((data: EnrollmentResponse) => {
-            switch (data.data.action.payer_authentication_enrollment.authentication_status) {
+            const { authentication_status } = data.data.action.payer_authentication_enrollment;
+            onEnrollment && onEnrollment(authentication_status);
+            switch (authentication_status) {
                 case EnrollmentAuthenticationStatus.REQUIRED:
                     const {
                         step_up_url,
@@ -142,7 +148,6 @@ const DataCollection = ({
                 case EnrollmentAuthenticationStatus.FAILED:
                 case EnrollmentAuthenticationStatus.REJECTED:
                 case EnrollmentAuthenticationStatus.NOT_ELIGIBLE:
-                    navigateBackToHome();
                     break;
             }
         }).catch((error: Safepay.errors.SafepayError) => {
@@ -161,11 +166,7 @@ const DataCollection = ({
 
     const onMessage = React.useCallback((event: WebViewMessageEvent) => {
         try {
-            const data: {
-                type: string,
-                name: string,
-                detail: any
-            } = JSON.parse(event.nativeEvent.data);
+            const data: CardinalMessage = JSON.parse(event.nativeEvent.data);
             switch (data.name) {
                 case "safepay-inframe__ready":
                     sendDeviceDataCollectionDetails();
@@ -175,13 +176,12 @@ const DataCollection = ({
                     break;
                 case "safepay-inframe__cardinal-3ds__success":
                     setTimeout(() => {
-                        navigateBackToHome();
+                        onCardinalSuccess && onCardinalSuccess(data);
                     }, 1000); // timeout to allow the user to see the success message
                     break;
                 case "safepay-inframe__cardinal-3ds__failure":
-                    console.error(data.detail.error);
+                    onCardinalError && onCardinalError(data);
                     setTimeout(() => {
-                        navigateBackToHome();
                     }, 5000); // timeout to allow the user to see the failure message
                     break;
             }
