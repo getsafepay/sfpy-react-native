@@ -1,9 +1,8 @@
-/**
- * @format
- */
+import { SafepayContext, SafepayContextType } from "./src/contexts";
+import { DataCollection } from "./src/components/DataCollection";
+import { EnrollmentAuthenticationStatus, PaymentMode, PaymentScheme, PaymentState } from "./src/enums";
+import { useAuthenticatedSafepay, useOnSafepayError, useSafepay } from "./src/hooks";
+import { Address, EnrollmentResponse, TrackerAuthenticationResponse } from "./src/types";
 
-import {AppRegistry} from 'react-native';
-import App from './App';
-import {name as appName} from './app.json';
-
-AppRegistry.registerComponent(appName, () => App);
+export { Address, EnrollmentAuthenticationStatus, EnrollmentResponse, PaymentMode, PaymentScheme, PaymentState, SafepayContext, SafepayContextType, TrackerAuthenticationResponse, useAuthenticatedSafepay, useOnSafepayError, useSafepay };
+export default DataCollection;

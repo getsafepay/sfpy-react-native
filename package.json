@@ -1,21 +1,27 @@
 {
-    "name": "SafepayReactNativeDDSThreeds",
+    "name": "sfpy-react-native",
+    "author": "Safepay",
     "version": "0.0.1",
-    "private": true,
+    "private": false,
+    "license": "MIT",
+    "main": "dist/index.js",
+    "module": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "keywords": [
+        "React Native",
+        "Safepay"
+    ],
     "scripts": {
-        "android": "react-native run-android",
-        "ios": "react-native run-ios",
-        "lint": "eslint .",
-        "start": "react-native start",
-        "test": "jest"
+        "test": "jest",
+        "build": "tsc"
     },
     "dependencies": {
         "@sfpy/node-core": "^0.2.2",
         "@types/lodash": "^4.17.15",
         "axios": "^1.7.9",
         "lodash": "^4.17.21",
-        "react": "18.3.1",
-        "react-native": "0.77.0",
+        "react-native-safe-area-context": "^5.2.0",
+        "react-native-safe-area-view": "^2.0.0",
         "react-native-webview": "^13.13.2"
     },
     "devDependencies": {
@@ -42,7 +48,18 @@
         "react-test-renderer": "18.3.1",
         "typescript": "5.0.4"
     },
+    "peerDependencies": {
+        "react": "~18.3.1",
+        "react-native": "~0.76.7"
+    },
     "engines": {
         "node": ">=18"
+    },
+    "exports": {
+        ".": {
+            "import": "./dist/index.js",
+            "require": "./dist/index.js",
+            "types": "./dist/index.d.ts"
+        }
     }
 }
