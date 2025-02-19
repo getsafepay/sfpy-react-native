@@ -1,5 +1,5 @@
 import { SafepayContext } from '../../contexts/SafepayContext';
-import { EnrollmentAuthenticationStatus } from '../../enums';
+import { EnrollmentAuthenticationStatus, ENVIRONMENT } from '../../enums';
 import { useOnSafepayError } from '../../hooks';
 import { CardinalMessage, EnrollmentResponse, TrackerAuthenticationResponse } from '../../types';
 import Safepay from "@sfpy/node-core";
@@ -8,18 +8,13 @@ import { Text, View } from 'react-native';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 
 
-const DROPS_URL = process.env.DROPS_URL;
-const THREEDS_URL = `${DROPS_URL}/threeds`;
-const DEVICE_URL = `${DROPS_URL}/device`;
-const SUCCESS_URL = `${THREEDS_URL}/success`;
-const FAILURE_URL = `${THREEDS_URL}/failure`;
-
 export type DataCollectionProps = {
     onAuthentication?: (data: TrackerAuthenticationResponse) => void;
     onEnrollment?: (status: EnrollmentAuthenticationStatus) => void;
     onSafepayApiError?: (error?: Safepay.errors.SafepayError | undefined) => void;
     onCardinalSuccess?: (data: CardinalMessage) => void;
     onCardinalError?: (data: CardinalMessage) => void;
+    environment?: ENVIRONMENT;
 };
 
 export const DataCollection = ({
@@ -27,8 +22,18 @@ export const DataCollection = ({
     onEnrollment,
     onCardinalSuccess,
     onCardinalError,
-    onSafepayApiError
+    onSafepayApiError,
+    environment: _environment
 }: DataCollectionProps) => {
+
+    const environment = _environment || ENVIRONMENT.SANDBOX;
+
+    // TODO: add production URLs when deployed
+    const dropsUrl = environment === ENVIRONMENT.DEVELOPMENT ? "https://dev.api.getsafepay.com/drops" : "https://sandbox.api.getsafepay.com/drops";
+    const threedsUrl = `${dropsUrl}/threeds`;
+    const deviceUrl = `${dropsUrl}/device`;
+    const successUrl = `${threedsUrl}/success`;
+    const failureUrl = `${threedsUrl}/failure`;
 
     const webViewRef = useRef<WebView>(null);
 
@@ -72,7 +77,6 @@ export const DataCollection = ({
             type: 'safepay-property-update',
             properties,
         });
-        console.log("message", message);
         // Inject JavaScript to send the message to the webpage
         const script = generateMessageScript(message);
         webViewRef.current.injectJavaScript(script);
@@ -87,15 +91,14 @@ export const DataCollection = ({
         errorCallback: onSafepayApiError
     });
 
-    const [webViewUri, setWebViewUri] = React.useState<string>(DEVICE_URL);
+    const [webViewUri, setWebViewUri] = React.useState<string>(deviceUrl);
 
     const doThreeDs = React.useCallback((stepUpUrl: string, accessToken: string) => {
-        console.log("doing 3ds", stepUpUrl, accessToken);
         setProperties({
             threeDSJWT: accessToken,
             threeDSURL: stepUpUrl
         });
-        setWebViewUri(THREEDS_URL);
+        setWebViewUri(threedsUrl);
     }, [setWebViewUri])
 
     const doAuthentication = React.useCallback(() => {
@@ -117,9 +120,7 @@ export const DataCollection = ({
     }, [tracker]);
 
     const doEnrollment = React.useCallback((sessionId: string) => {
-        console.log("doing enrollment", tracker, street_1, city, postal_code, country);
         if (!(tracker && street_1 && city && postal_code && country)) return;
-        console.log("sessionId", sessionId)
         safepay?.order.tracker.action(tracker, {
             payload: {
                 billing: {
@@ -134,15 +135,14 @@ export const DataCollection = ({
                     do_capture: false
                 },
                 authentication_setup: {
-                    success_url: SUCCESS_URL,
-                    failure_url: FAILURE_URL,
+                    success_url: successUrl,
+                    failure_url: failureUrl,
                     device_fingerprint_session_id: sessionId
                 }
             }
         }).then((data: EnrollmentResponse) => {
             const { authentication_status } = data.data.action.payer_authentication_enrollment;
             onEnrollment && onEnrollment(authentication_status);
-            console.log("enrollment status", authentication_status);
             switch (authentication_status) {
                 case EnrollmentAuthenticationStatus.REQUIRED:
                     const {
@@ -162,7 +162,6 @@ export const DataCollection = ({
                     break;
             }
         }).catch((error: Safepay.errors.SafepayError) => {
-            console.log("enrollment error", error);
             onSafepayError(error);
         });
     }, [
@@ -181,20 +180,16 @@ export const DataCollection = ({
             const data: CardinalMessage = JSON.parse(event.nativeEvent.data);
             switch (data.name) {
                 case "safepay-inframe__ready":
-                    console.log("safepay-inframe__ready");
                     sendDeviceDataCollectionDetails();
                     break;
                 case "safepay-inframe__cardinal-device-data__complete":
-                    console.log("safepay-inframe__cardinal-device-data__complete");
                     doEnrollment(data.detail.sessionId);
                     break;
                 case "safepay-inframe__cardinal-3ds__success":
                     onCardinalSuccess && onCardinalSuccess(data);
-                    console.log("safepay-inframe__cardinal-3ds__success");
                     break;
                 case "safepay-inframe__cardinal-3ds__failure":
                     onCardinalError && onCardinalError(data);
-                    console.log("safepay-inframe__cardinal-3ds__failure");
                     break;
             }
         } catch (e) {

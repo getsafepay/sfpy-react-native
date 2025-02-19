@@ -1,5 +1,5 @@
 import * as React from 'react';
-import DataCollection from './src/components/DataCollection';
+import { DataCollection } from './src/components';
 import { SafepayContext } from './src/contexts/SafepayContext';
 import { SafepayContextType } from './src/types';
 
