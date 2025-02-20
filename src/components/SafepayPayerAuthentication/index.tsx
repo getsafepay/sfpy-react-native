@@ -1,6 +1,6 @@
 import Safepay from "@sfpy/node-core";
 import React, { useContext, useRef } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 import { SafepayContext } from '../../contexts/SafepayContext';
 import { EnrollmentAuthenticationStatus, ENVIRONMENT } from '../../enums';
@@ -9,38 +9,39 @@ import { CardinalMessage, EnrollmentResponse, TrackerAuthenticationResponse } fr
 
 
 export type SafepayPayerAuthenticationProps = {
-    onAuthorization?: (data: TrackerAuthenticationResponse) => void;
-    onEnrollment?: (status: EnrollmentAuthenticationStatus) => void;
+    onAuthorizationSuccess?: (data: TrackerAuthenticationResponse) => void;
+    onEnrollmentSuccess?: (status: EnrollmentAuthenticationStatus) => void;
     onSafepayApiError?: (error?: Safepay.errors.SafepayError | undefined) => void;
     onCardinalSuccess?: (data: CardinalMessage) => void;
     onCardinalError?: (data: CardinalMessage) => void;
     environment?: ENVIRONMENT;
-    doCaptureOnAuthorization?: boolean
+    doCaptureOnAuthorization?: boolean,
+    doCardOnFile?: boolean
 };
 
 export const SafepayPayerAuthentication = ({
-    onAuthorization,
-    onEnrollment,
+    onAuthorizationSuccess,
+    onEnrollmentSuccess,
     onCardinalSuccess,
     onCardinalError,
     onSafepayApiError,
     environment: _environment,
-    doCaptureOnAuthorization
+    doCaptureOnAuthorization,
+    doCardOnFile
 }: SafepayPayerAuthenticationProps) => {
 
     const environment = _environment || ENVIRONMENT.SANDBOX;
 
-    // TODO: add production URLs when deployed
+    // TODO: add production URLs
     const host = environment === ENVIRONMENT.DEVELOPMENT ? "https://dev.api.getsafepay.com" : "https://sandbox.api.getsafepay.com";
-    const dropsUrl = `${host}/drops`;
+    const dropsHost = "https://dev.api.getsafepay.com";
+    const dropsUrl = `${dropsHost}/drops`;
     const threedsUrl = `${dropsUrl}/threeds`;
     const deviceUrl = `${dropsUrl}/device`;
     const successUrl = `${threedsUrl}/success`;
     const failureUrl = `${threedsUrl}/failure`;
 
     const webViewRef = useRef<WebView>(null);
-
-    const [loading, setLoading] = React.useState<boolean>(false);
 
     const {
         clientSecret,
@@ -106,21 +107,20 @@ export const SafepayPayerAuthentication = ({
 
     const doAuthorization = React.useCallback(() => {
         if (!tracker) return;
-        setLoading(true);
         safepay?.order.tracker.action(tracker, {
+            use_action_chaining: doCaptureOnAuthorization === undefined ? false : doCaptureOnAuthorization,
             payload: {
                 authorization: {
-                    do_capture: false
+                    do_capture: doCaptureOnAuthorization === undefined ? false : doCaptureOnAuthorization,
+                    do_card_on_file: doCardOnFile === undefined ? false : doCardOnFile
                 }
             }
         }).then((data: TrackerAuthenticationResponse) => {
-            onAuthorization && onAuthorization(data);
-            setLoading(false);
+            onAuthorizationSuccess && onAuthorizationSuccess(data);
         }).catch((error: Safepay.errors.SafepayError) => {
             onSafepayError(error);
-            setLoading(false);
         });
-    }, [tracker]);
+    }, [tracker, doCaptureOnAuthorization, doCardOnFile]);
 
     const doEnrollment = React.useCallback((sessionId: string) => {
         if (!(tracker && street_1 && city && postal_code && country)) return;
@@ -135,7 +135,8 @@ export const SafepayPayerAuthentication = ({
                     country
                 },
                 authorization: {
-                    do_capture: doCaptureOnAuthorization === undefined ? false : doCaptureOnAuthorization
+                    do_capture: doCaptureOnAuthorization === undefined ? false : doCaptureOnAuthorization,
+                    do_card_on_file: doCardOnFile === undefined ? false : doCardOnFile
                 },
                 authentication_setup: {
                     success_url: successUrl,
@@ -145,7 +146,7 @@ export const SafepayPayerAuthentication = ({
             }
         }).then((data: EnrollmentResponse) => {
             const { authentication_status } = data.data.action.payer_authentication_enrollment;
-            onEnrollment && onEnrollment(authentication_status);
+            onEnrollmentSuccess && onEnrollmentSuccess(authentication_status);
             switch (authentication_status) {
                 case EnrollmentAuthenticationStatus.REQUIRED:
                     const {
@@ -175,7 +176,9 @@ export const SafepayPayerAuthentication = ({
         postal_code,
         country,
         doThreeDs,
-        doAuthorization
+        doAuthorization,
+        doCaptureOnAuthorization,
+        doCardOnFile
     ]);
 
     const onMessage = React.useCallback((event: WebViewMessageEvent) => {
@@ -206,47 +209,27 @@ export const SafepayPayerAuthentication = ({
                 flex: 1
             }}
         >
-            {
-                loading ?
-                    <View
-                        style={{
-                            flex: 1,
-                            display: 'flex',
-                            justifyContent: 'center',
-                            alignItems: 'center'
-                        }}
-
-                    >
-                        <Text>Loading...</Text>
-                    </View> :
-                    <View
-                        style={{
-                            flex: 1
-                        }}
-                    >
-                        <View
-                            style={{
-                                flex: 1
-                            }}
-                        >
-                            <WebView
-                                ref={webViewRef}
-                                source={{ uri: webViewUri }}
-                                javaScriptEnabled
-                                domStorageEnabled
-                                onMessage={onMessage}
-                                injectedJavaScript={`
-                                        console.log = (function (oldLog) {
-                                            return function (...args) {
-                                            window.ReactNativeWebView.postMessage(JSON.stringify(args));
-                                            oldLog(...args);
-                                            };
-                                        })(console.log);
-                                    `}
-                            />
-                        </View>
-                    </View>
-            }
+            <View
+                style={{
+                    flex: 1
+                }}
+            >
+                <WebView
+                    ref={webViewRef}
+                    source={{ uri: webViewUri }}
+                    javaScriptEnabled
+                    domStorageEnabled
+                    onMessage={onMessage}
+                    injectedJavaScript={`
+                        console.log = (function (oldLog) {
+                            return function (...args) {
+                            window.ReactNativeWebView.postMessage(JSON.stringify(args));
+                            oldLog(...args);
+                            };
+                        })(console.log);
+                    `}
+                />
+            </View>
         </View>
     );
 };
