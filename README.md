@@ -20,6 +20,46 @@ In your React Native project, import the components and hooks as named exports:
 import { SafepayPayerAuthentication, SafepayContext, EnrollmentAuthenticationStatus } from "sfpy-react-native";
 ```
 
+## Example usage
+
+Use the SafepayPayerAuthentication in the following way using the SafepayContext.
+
+```typescript
+export default function Index() {
+    const values = {
+        // this can be either a Time Based Token or JWT
+        clientSecret: "0wX...A==",
+        // this is the payment tracker token
+        tracker: "track_c22f4888-dd09-4b99-83ec-e65dd9fc7b88",
+        // these are the JWT and URL for Cardinal, provided by the payment API
+        deviceDataCollectionJWT: "eys...f84",
+        deviceDataCollectionURL: "https://centinelapistag.cardinalcommerce.com/V1/Cruise/Collect",
+        // this is the address of the customer
+        street_1: "St 12",
+        street_2: "",
+        city: "Islamabad",
+        state: "",
+        postal_code: "44000",
+        country: "PK"
+    } as SafepayContextType;
+
+    return (
+        <SafepayContext.Provider value={values}>
+            <SafepayPayerAuthentication
+                environment={ENVIRONMENT.DEVELOPMENT}
+                onCardinalSuccess={(data) => console.log("onCardinalSuccess", data)}
+                onCardinalError={(error) => console.log("onCardinalError", error)}
+                onAuthorizationSuccess={(data) => console.log("onAuthorization", data)}
+                onSafepayApiError={(error) => { console.log("onSafepayApiError", error) }}
+                onEnrollmentSuccess={(data) => console.log("onEnrollment", data)}
+                doCaptureOnAuthorization
+            />
+        </SafepayContext.Provider>
+    );
+};
+```
+
+
 ### SafepayPayerAuthentication Callbacks
 
 The component accepts several callbacks that receive response payloads. Below are example responses:
