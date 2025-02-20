@@ -1,1 +1,1 @@
-export * from './DataCollection';
+export * from './SafepayPayerAuthentication';

@@ -1,35 +1,38 @@
-import { SafepayContext } from '../../contexts/SafepayContext';
-import { EnrollmentAuthenticationStatus, ENVIRONMENT } from '../../enums';
-import { useOnSafepayError } from '../../hooks';
-import { CardinalMessage, EnrollmentResponse, TrackerAuthenticationResponse } from '../../types';
 import Safepay from "@sfpy/node-core";
 import React, { useContext, useRef } from 'react';
 import { Text, View } from 'react-native';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
+import { SafepayContext } from '../../contexts/SafepayContext';
+import { EnrollmentAuthenticationStatus, ENVIRONMENT } from '../../enums';
+import { useOnSafepayError } from '../../hooks';
+import { CardinalMessage, EnrollmentResponse, TrackerAuthenticationResponse } from '../../types';
 
 
-export type DataCollectionProps = {
-    onAuthentication?: (data: TrackerAuthenticationResponse) => void;
+export type SafepayPayerAuthenticationProps = {
+    onAuthorization?: (data: TrackerAuthenticationResponse) => void;
     onEnrollment?: (status: EnrollmentAuthenticationStatus) => void;
     onSafepayApiError?: (error?: Safepay.errors.SafepayError | undefined) => void;
     onCardinalSuccess?: (data: CardinalMessage) => void;
     onCardinalError?: (data: CardinalMessage) => void;
     environment?: ENVIRONMENT;
+    doCaptureOnAuthorization?: boolean
 };
 
-export const DataCollection = ({
-    onAuthentication,
+export const SafepayPayerAuthentication = ({
+    onAuthorization,
     onEnrollment,
     onCardinalSuccess,
     onCardinalError,
     onSafepayApiError,
-    environment: _environment
-}: DataCollectionProps) => {
+    environment: _environment,
+    doCaptureOnAuthorization
+}: SafepayPayerAuthenticationProps) => {
 
     const environment = _environment || ENVIRONMENT.SANDBOX;
 
     // TODO: add production URLs when deployed
-    const dropsUrl = environment === ENVIRONMENT.DEVELOPMENT ? "https://dev.api.getsafepay.com/drops" : "https://sandbox.api.getsafepay.com/drops";
+    const host = environment === ENVIRONMENT.DEVELOPMENT ? "https://dev.api.getsafepay.com" : "https://sandbox.api.getsafepay.com";
+    const dropsUrl = `${host}/drops`;
     const threedsUrl = `${dropsUrl}/threeds`;
     const deviceUrl = `${dropsUrl}/device`;
     const successUrl = `${threedsUrl}/success`;
@@ -65,12 +68,12 @@ export const DataCollection = ({
     React.useEffect(() => {
         setProperties({
             deviceDataCollectionJWT,
-            deviceDataCollectionURL
+            deviceDataCollectionURL,
         });
     }, [deviceDataCollectionJWT, deviceDataCollectionURL]);
 
     // Function to send messages to the iframe
-    const sendDeviceDataCollectionDetails = React.useCallback(() => {
+    const sendDeviceSafepayPayerAuthenticationDetails = React.useCallback(() => {
         if (!webViewRef.current) return;
         // Prepare the message to send to the webpage
         const message = JSON.stringify({
@@ -84,7 +87,7 @@ export const DataCollection = ({
 
     const safepay = new Safepay(clientSecret, {
         authType: "jwt", // either 'jwt' or 'secret' depending on what you provide
-        host: "https://dev.api.getsafepay.com", // can be configured to our sandbox host for test transactions
+        host, // can be configured to our sandbox host for test transactions
     });
 
     const { onSafepayError } = useOnSafepayError({
@@ -101,7 +104,7 @@ export const DataCollection = ({
         setWebViewUri(threedsUrl);
     }, [setWebViewUri])
 
-    const doAuthentication = React.useCallback(() => {
+    const doAuthorization = React.useCallback(() => {
         if (!tracker) return;
         setLoading(true);
         safepay?.order.tracker.action(tracker, {
@@ -111,7 +114,7 @@ export const DataCollection = ({
                 }
             }
         }).then((data: TrackerAuthenticationResponse) => {
-            onAuthentication && onAuthentication(data);
+            onAuthorization && onAuthorization(data);
             setLoading(false);
         }).catch((error: Safepay.errors.SafepayError) => {
             onSafepayError(error);
@@ -132,7 +135,7 @@ export const DataCollection = ({
                     country
                 },
                 authorization: {
-                    do_capture: false
+                    do_capture: doCaptureOnAuthorization === undefined ? false : doCaptureOnAuthorization
                 },
                 authentication_setup: {
                     success_url: successUrl,
@@ -153,7 +156,7 @@ export const DataCollection = ({
                     break;
                 case EnrollmentAuthenticationStatus.FRICTIONLESS:
                 case EnrollmentAuthenticationStatus.ATTEMPTED:
-                    doAuthentication();
+                    doAuthorization();
                     break;
                 case EnrollmentAuthenticationStatus.UNAVAILABLE:
                 case EnrollmentAuthenticationStatus.FAILED:
@@ -172,7 +175,7 @@ export const DataCollection = ({
         postal_code,
         country,
         doThreeDs,
-        doAuthentication
+        doAuthorization
     ]);
 
     const onMessage = React.useCallback((event: WebViewMessageEvent) => {
@@ -180,7 +183,7 @@ export const DataCollection = ({
             const data: CardinalMessage = JSON.parse(event.nativeEvent.data);
             switch (data.name) {
                 case "safepay-inframe__ready":
-                    sendDeviceDataCollectionDetails();
+                    sendDeviceSafepayPayerAuthenticationDetails();
                     break;
                 case "safepay-inframe__cardinal-device-data__complete":
                     doEnrollment(data.detail.sessionId);
@@ -195,7 +198,7 @@ export const DataCollection = ({
         } catch (e) {
             console.log(e);
         }
-    }, [sendDeviceDataCollectionDetails, doEnrollment]);
+    }, [sendDeviceSafepayPayerAuthenticationDetails, doEnrollment]);
 
     return (
         <View
