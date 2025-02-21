@@ -1,9 +1,13 @@
 import { Address } from "./Address";
 
 
-export type SafepayContextType = {
+type SafepayContextTypeWithoutSetter = {
     tracker: string,
     clientSecret: string,
     deviceDataCollectionJWT: string,
-    deviceDataCollectionURL: string
+    deviceDataCollectionURL: string,
 } & Address;
+
+export type SafepayContextType = SafepayContextTypeWithoutSetter & {
+    setValues?: (values: SafepayContextTypeWithoutSetter) => void;
+};
