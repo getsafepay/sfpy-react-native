@@ -1,4 +1,4 @@
-# sfpy-react-native
+# @sfpy/react-native
 
 A React Native library for Safepay integration that provides components, hooks, and types to help you quickly integrate Safepay functionality into your React Native projects.
 
@@ -7,9 +7,9 @@ A React Native library for Safepay integration that provides components, hooks, 
 Once the package is published on npm, simply run:
 
 ```sh
-npm install sfpy-react-native
+npm install @sfpy/react-native
 # or
-yarn add sfpy-react-native
+yarn add @sfpy/react-native
 ```
 
 ## Usage
@@ -17,7 +17,7 @@ yarn add sfpy-react-native
 In your React Native project, import the components and hooks as named exports:
 
 ```javascript
-import { SafepayPayerAuthentication, SafepayContext, EnrollmentAuthenticationStatus } from "sfpy-react-native";
+import { SafepayPayerAuthentication, SafepayContext, EnrollmentAuthenticationStatus } from "@sfpy/react-native";
 ```
 
 ## Example usage
@@ -52,6 +52,7 @@ export default function Index() {
                 onAuthorizationSuccess={(data) => console.log("onAuthorization", data)}
                 onSafepayApiError={(error) => { console.log("onSafepayApiError", error) }}
                 onEnrollmentSuccess={(data) => console.log("onEnrollment", data)}
+                onEnrollmentFailure={(data) => console.log("onEnrollment", data)}
                 doCaptureOnAuthorization
             />
         </SafepayContext.Provider>
@@ -128,7 +129,7 @@ Called when payment authorization succeeds. Example response:
 Called when enrollment completes. This callback returns only an EnrollmentAuthenticationStatus which can be imported from the SDK:
 
 ```typescript
-import { EnrollmentAuthenticationStatus } from 'sfpy-react-native';
+import { EnrollmentAuthenticationStatus } from '@sfpy/react-native';
 
 // Possible values:
 // REQUIRED

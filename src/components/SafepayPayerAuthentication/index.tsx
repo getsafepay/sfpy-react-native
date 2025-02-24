@@ -11,6 +11,7 @@ import { CardinalMessage, EnrollmentResponse, TrackerAuthenticationResponse } fr
 export type SafepayPayerAuthenticationProps = {
     onAuthorizationSuccess?: (data: TrackerAuthenticationResponse) => void;
     onEnrollmentSuccess?: (status: EnrollmentAuthenticationStatus) => void;
+    onEnrollmentFailure?: (status: EnrollmentAuthenticationStatus) => void;
     onSafepayApiError?: (error?: Safepay.errors.SafepayError | undefined) => void;
     onCardinalSuccess?: (data: CardinalMessage) => void;
     onCardinalError?: (data: CardinalMessage) => void;
@@ -22,6 +23,7 @@ export type SafepayPayerAuthenticationProps = {
 export const SafepayPayerAuthentication = ({
     onAuthorizationSuccess,
     onEnrollmentSuccess,
+    onEnrollmentFailure,
     onCardinalSuccess,
     onCardinalError,
     onSafepayApiError,
@@ -163,6 +165,7 @@ export const SafepayPayerAuthentication = ({
                 case EnrollmentAuthenticationStatus.FAILED:
                 case EnrollmentAuthenticationStatus.REJECTED:
                 case EnrollmentAuthenticationStatus.NOT_ELIGIBLE:
+                    onEnrollmentFailure && onEnrollmentFailure(authentication_status);
                     break;
             }
         }).catch((error: Safepay.errors.SafepayError) => {
