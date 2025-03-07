@@ -1,31 +1,28 @@
-import Safepay from "@sfpy/node-core";
 import React, { useContext, useRef } from 'react';
 import { Platform, View } from 'react-native';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 import { SafepayContext } from '../../contexts/SafepayContext';
-import { EnrollmentAuthenticationStatus, ENVIRONMENT } from '../../enums';
-import { Address, CardinalMessage, TrackerAuthenticationResponse } from '../../types';
+import { ENVIRONMENT } from '../../enums';
+import { Address, CardinalMessage } from '../../types';
 
 
 export type SafepayPayerAuthenticationProps = {
-    onAuthorizationSuccess?: (data: TrackerAuthenticationResponse) => void;
-    onEnrollmentSuccess?: (status: EnrollmentAuthenticationStatus) => void;
-    onEnrollmentFailure?: (status: EnrollmentAuthenticationStatus) => void;
-    onSafepayApiError?: (error?: Safepay.errors.SafepayError | undefined) => void;
     onCardinalSuccess?: (data: CardinalMessage) => void;
     onCardinalError?: (data: CardinalMessage) => void;
+    onPayerAuthEnrollmentRequired?: () => void;
+    onPayerAuthEnrollmentFrictionless?: () => void;
+    onPayerAuthEnrollmentFailure?: () => void;
     environment?: ENVIRONMENT;
     doCaptureOnAuthorization?: boolean,
     doCardOnFile?: boolean
 };
 
 export const SafepayPayerAuthentication = ({
-    onAuthorizationSuccess,
-    onEnrollmentSuccess,
-    onEnrollmentFailure,
     onCardinalSuccess,
     onCardinalError,
-    onSafepayApiError,
+    onPayerAuthEnrollmentRequired,
+    onPayerAuthEnrollmentFrictionless,
+    onPayerAuthEnrollmentFailure,
     environment: _environment,
     doCaptureOnAuthorization,
     doCardOnFile
@@ -127,11 +124,20 @@ export const SafepayPayerAuthentication = ({
                 case "safepay-inframe__cardinal-3ds__failure":
                     onCardinalError && onCardinalError(data);
                     break;
+                case "safepay-inframe__enrollment__required":
+                    onPayerAuthEnrollmentRequired && onPayerAuthEnrollmentRequired();
+                    break;
+                case "safepay-inframe__enrollment__frictionless":
+                    onPayerAuthEnrollmentFrictionless && onPayerAuthEnrollmentFrictionless();
+                    break;
+                case "safepay-inframe__enrollment__failure":
+                    onPayerAuthEnrollmentFailure && onPayerAuthEnrollmentFailure();
+                    break;
             }
         } catch (e) {
             console.log(e);
         }
-    }, [sendDeviceSafepayPayerAuthenticationDetails]);
+    }, [sendDeviceSafepayPayerAuthenticationDetails, onCardinalSuccess, onCardinalError]);
 
     return (
         <View
