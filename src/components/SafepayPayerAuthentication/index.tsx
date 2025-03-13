@@ -3,15 +3,15 @@ import { Platform, View } from 'react-native';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 import { SafepayContext } from '../../contexts/SafepayContext';
 import { ENVIRONMENT } from '../../enums';
-import { Address, CardinalMessage } from '../../types';
+import { Address, AuthorizationResponse, Cardinal3dsFailureData, Cardinal3dsSuccessData, PayerAuthEnrollmentFailureError } from '../../types';
 
 
 export type SafepayPayerAuthenticationProps = {
-    onCardinalSuccess?: (data: CardinalMessage) => void;
-    onCardinalError?: (data: CardinalMessage) => void;
+    onCardinalSuccess?: (data: Cardinal3dsSuccessData) => void;
+    onCardinalError?: (data: Cardinal3dsFailureData) => void;
     onPayerAuthEnrollmentRequired?: () => void;
-    onPayerAuthEnrollmentFrictionless?: () => void;
-    onPayerAuthEnrollmentFailure?: () => void;
+    onPayerAuthEnrollmentFrictionless?: (data: AuthorizationResponse) => void;
+    onPayerAuthEnrollmentFailure?: (error: PayerAuthEnrollmentFailureError) => void;
     environment?: ENVIRONMENT;
     doCaptureOnAuthorization?: boolean,
     doCardOnFile?: boolean
@@ -30,18 +30,19 @@ export const SafepayPayerAuthentication = ({
 
     const environment = _environment || ENVIRONMENT.SANDBOX;
 
-    // TODO: add production URLs
     const getBaseUrl = () => {
         switch (environment) {
             case ENVIRONMENT.LOCAL:
                 if (Platform.OS === 'android') {
-                    return 'http://10.0.2.2:3000';  // Android emulator localhost
+                    return 'http://10.0.2.2:3000'; // Android emulator localhost
                 }
-                return 'http://localhost:3000';      // iOS localhost
+                return 'http://localhost:3000'; // iOS localhost
             case ENVIRONMENT.DEVELOPMENT:
                 return "https://dev.api.getsafepay.com";
             case ENVIRONMENT.SANDBOX:
                 return "https://sandbox.api.getsafepay.com";
+            case ENVIRONMENT.PRODUCTION:
+                return "https://api.getsafepay.com";
             default:
                 return "https://dev.api.getsafepay.com";
         }
@@ -113,25 +114,25 @@ export const SafepayPayerAuthentication = ({
 
     const onMessage = React.useCallback((event: WebViewMessageEvent) => {
         try {
-            const data: CardinalMessage = JSON.parse(event.nativeEvent.data);
+            const data = JSON.parse(event.nativeEvent.data);
             switch (data.name) {
                 case "safepay-inframe__ready":
                     sendDeviceSafepayPayerAuthenticationDetails();
                     break;
                 case "safepay-inframe__cardinal-3ds__success":
-                    onCardinalSuccess && onCardinalSuccess(data);
+                    onCardinalSuccess && onCardinalSuccess(data as Cardinal3dsSuccessData);
                     break;
                 case "safepay-inframe__cardinal-3ds__failure":
-                    onCardinalError && onCardinalError(data);
+                    onCardinalError && onCardinalError(data as Cardinal3dsFailureData);
                     break;
                 case "safepay-inframe__enrollment__required":
                     onPayerAuthEnrollmentRequired && onPayerAuthEnrollmentRequired();
                     break;
                 case "safepay-inframe__enrollment__frictionless":
-                    onPayerAuthEnrollmentFrictionless && onPayerAuthEnrollmentFrictionless();
+                    onPayerAuthEnrollmentFrictionless && onPayerAuthEnrollmentFrictionless(data as AuthorizationResponse);
                     break;
-                case "safepay-inframe__enrollment__failure":
-                    onPayerAuthEnrollmentFailure && onPayerAuthEnrollmentFailure();
+                case "safepay-inframe__enrollment__failed":
+                    onPayerAuthEnrollmentFailure && onPayerAuthEnrollmentFailure(data as PayerAuthEnrollmentFailureError);
                     break;
             }
         } catch (e) {
