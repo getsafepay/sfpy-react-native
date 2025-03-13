@@ -2,7 +2,7 @@
     "name": "@sfpy/react-native",
     "author": "Safepay",
     "description": "Official React Native SDK to perform Payer Authentication and Device Data Collection",
-    "version": "0.0.3",
+    "version": "0.0.4",
     "private": false,
     "license": "MIT",
     "main": "dist/index.js",
@@ -53,7 +53,7 @@
     "peerDependencies": {
         "react": ">=16.8.0",
         "react-native": ">=0.60.0",
-        "react-native-webview": ">=13.12.5"
+        "react-native-webview": ">=13.13.2"
     },
     "engines": {
         "node": ">=18"

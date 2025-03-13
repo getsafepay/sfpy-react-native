@@ -1,4 +1,4 @@
-import { Address } from "./Address";
+import { OptionalAddress } from "./OptionalAddress";
 
 
 type SafepayContextTypeWithoutSetter = {
@@ -6,7 +6,7 @@ type SafepayContextTypeWithoutSetter = {
     clientSecret: string,
     deviceDataCollectionJWT: string,
     deviceDataCollectionURL: string,
-} & Address;
+} & OptionalAddress;
 
 export type SafepayContextType = SafepayContextTypeWithoutSetter & {
     setValues?: (values: SafepayContextTypeWithoutSetter) => void;
