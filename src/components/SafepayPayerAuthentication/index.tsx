@@ -3,10 +3,11 @@ import { Platform, View } from 'react-native';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 import { SafepayContext } from '../../contexts/SafepayContext';
 import { ENVIRONMENT } from '../../enums';
-import { Address, AuthorizationResponse, Cardinal3dsFailureData, Cardinal3dsSuccessData, PayerAuthEnrollmentFailureError } from '../../types';
+import { Address, AuthorizationResponse, Cardinal3dsFailureData, Cardinal3dsSuccessData, OnSafepayErrorData, PayerAuthEnrollmentFailureError } from '../../types';
 
 
 export type SafepayPayerAuthenticationProps = {
+    onSafepayError?: (data: OnSafepayErrorData) => void;
     onCardinalSuccess?: (data: Cardinal3dsSuccessData) => void;
     onCardinalError?: (data: Cardinal3dsFailureData) => void;
     onPayerAuthEnrollmentRequired?: () => void;
@@ -18,6 +19,7 @@ export type SafepayPayerAuthenticationProps = {
 };
 
 export const SafepayPayerAuthentication = ({
+    onSafepayError,
     onCardinalSuccess,
     onCardinalError,
     onPayerAuthEnrollmentRequired,
@@ -38,19 +40,20 @@ export const SafepayPayerAuthentication = ({
                 }
                 return 'http://localhost:3000'; // iOS localhost
             case ENVIRONMENT.DEVELOPMENT:
-                return "https://dev.api.getsafepay.com";
+                return "https://dev.api.getsafepay.com/drops";
             case ENVIRONMENT.SANDBOX:
-                return "https://sandbox.api.getsafepay.com";
+                return "https://sandbox.api.getsafepay.com/drops";
             case ENVIRONMENT.PRODUCTION:
-                return "https://api.getsafepay.com";
+                return "https://api.getsafepay.com/drops";
             default:
-                return "https://dev.api.getsafepay.com";
+                return "https://dev.api.getsafepay.com/drops";
         }
 
     };
 
     const baseUrl = getBaseUrl();
     const deviceUrl = `${baseUrl}/authlink`;
+    console.log(deviceUrl)
 
     const webViewRef = useRef<WebView>(null);
 
@@ -133,6 +136,9 @@ export const SafepayPayerAuthentication = ({
                     break;
                 case "safepay-inframe__enrollment__failed":
                     onPayerAuthEnrollmentFailure && onPayerAuthEnrollmentFailure(data as PayerAuthEnrollmentFailureError);
+                    break;
+                case "safepay-error":
+                    onSafepayError && onSafepayError(data as OnSafepayErrorData);
                     break;
             }
         } catch (e) {
