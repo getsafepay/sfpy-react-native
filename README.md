@@ -17,7 +17,7 @@ yarn add @sfpy/react-native
 In your React Native project, import the components and hooks as named exports:
 
 ```javascript
-import { SafepayPayerAuthentication, SafepayContext, EnrollmentAuthenticationStatus } from "@sfpy/react-native";
+import { SafepayPayerAuthentication, SafepayContext, EnrollmentAuthenticationStatus, Cardinal3dsSuccessData, Cardinal3dsFailureData, AuthorizationResponse, PayerAuthEnrollmentFailureError } from "@sfpy/react-native";
 ```
 
 ## Example usage
@@ -34,7 +34,7 @@ export default function Index() {
         // these are the JWT and URL for Cardinal, provided by the payment API
         deviceDataCollectionJWT: "eys...f84",
         deviceDataCollectionURL: "https://centinelapistag.cardinalcommerce.com/V1/Cruise/Collect",
-        // this is the address of the customer
+        // this is the address of the customer (this is optional)
         street_1: "St 12",
         street_2: "",
         city: "Islamabad",
@@ -47,19 +47,19 @@ export default function Index() {
         <SafepayContext.Provider value={values}>
             <SafepayPayerAuthentication
                 environment={ENVIRONMENT.DEVELOPMENT}
-                onCardinalSuccess={(data) => console.log("onCardinalSuccess", data)}
-                onCardinalError={(error) => console.log("onCardinalError", error)}
-                onAuthorizationSuccess={(data) => console.log("onAuthorization", data)}
-                onSafepayApiError={(error) => { console.log("onSafepayApiError", error) }}
-                onEnrollmentSuccess={(data) => console.log("onEnrollment", data)}
-                onEnrollmentFailure={(data) => console.log("onEnrollment", data)}
+                onCardinalSuccess={(data: Cardinal3dsSuccessData) => console.log("onCardinalSuccess", data)}
+                onCardinalError={(error: Cardinal3dsFailureData) => console.log("onCardinalError", error)}
+                onPayerAuthEnrollmentRequired={() => console.log("onPayerAuthEnrollmentRequired")}
+                onPayerAuthEnrollmentFrictionless={(data: AuthorizationResponse) => console.log("onPayerAuthEnrollmentFrictionless", data)}
+                onPayerAuthEnrollmentFailure={(error: PayerAuthEnrollmentFailureError) => console.log("onPayerAuthEnrollmentFailure", error)}
+                onSafepayError={(data) => console.log("onSafepayError", data)}
                 doCaptureOnAuthorization
+                doCardOnFile
             />
         </SafepayContext.Provider>
     );
 };
 ```
-
 
 ### SafepayPayerAuthentication Callbacks
 
@@ -71,10 +71,9 @@ Called when Cardinal 3DS authentication succeeds. Example response:
 ```json
 {
   "detail": {
-    "authorization": "auth_feb58926-7b76-4a53-9636-eeccf1cfdb3b",
     "payment_method": null,
-    "request_id": "req_9233cd4d-3fb6-4ee7-8fb0-ba7cc9e81647",
-    "tracker": "track_218bc59b-96c9-4cd8-b0aa-95670cab0326"
+    "request_id": "req_23461744-c342-42ef-9bed-f54f709c40d9",
+    "tracker": "track_a098c800-a24b-4eb2-ab62-aa8967a099df"
   },
   "name": "safepay-inframe__cardinal-3ds__success",
   "type": "safepay-inframe-event"
@@ -87,67 +86,70 @@ Called when Cardinal 3DS authentication fails. Example response:
 ```json
 {
   "detail": {
-    "error": "Your card issuer cannot authenticate this card. Please select another card or form of payment to complete your purchase.",
-    "request_id": "req_9233cd4d-3fb6-4ee7-8fb0-ba7cc9e81647",
-    "tracker": "track_218bc59b-96c9-4cd8-b0aa-95670cab0326"
+    "error": "error performing action 'PAYER_AUTH_ENROLLMENT': Encountered an error while performing payer authentication: payer could not be authenticated. Please try again with a different card or another form of payment.",
+    "request_id": null,
+    "tracker": "track_03ca9dca-3ee5-40fe-95e3-931554d0ef16"
   },
   "name": "safepay-inframe__cardinal-3ds__failure",
   "type": "safepay-inframe-event"
 }
 ```
 
-#### onAuthorizationSuccess
-Called when payment authorization succeeds. Example response:
+#### onPayerAuthEnrollmentRequired
+Called when payer authentication enrollment is required but receives no response data.
+
+#### onPayerAuthEnrollmentFrictionless
+Called when payer authentication enrollment is completed with frictionless authentication. Example response:
 
 ```json
 {
-  "data": {
-    "action": {
-      "payment_method": {},
-      "token": "req_9233cd4d-3fb6-4ee7-8fb0-ba7cc9e81647"
-    },
-    "tracker": {
-      "client": "sec_8970519c-17f8-4dc4-9d85-118a4c31afbf",
-      "customer": "cus_150e73e7-8808-403d-ac2d-616bf2d14909",
-      "entry_mode": "raw",
-      "environment": "development",
-      "intent": "CYBERSOURCE",
-      "mode": "payment",
-      "payment_method_kind": "card",
-      "state": "TRACKER_ENDED",
-      "token": "track_218bc59b-96c9-4cd8-b0aa-95670cab0326"
-    }
+  "detail": {
+    "request_id": "req_b15699bd-415e-4ed3-866b-227bbe69f714",
+    "tracker": "track_c6ead7f5-681c-469e-ab9f-4f2cc1f144e8"
   },
-  "status": {
-    "errors": [],
-    "message": "success"
-  }
+  "name": "safepay-inframe__enrollment__frictionless",
+  "type": "safepay-inframe-event"
 }
 ```
 
-#### onEnrollmentSuccess
-Called when enrollment completes. This callback returns only an EnrollmentAuthenticationStatus which can be imported from the SDK:
+#### onPayerAuthEnrollmentFailure
+Called when payer authentication enrollment fails. Example response:
 
-```typescript
-import { EnrollmentAuthenticationStatus } from '@sfpy/react-native';
+```json
+{
+  "detail": {
+    "errorMessage": "error performing action 'PAYER_AUTH_ENROLLMENT': Encountered an error while performing payer authentication: payer could not be authenticated. Please try again with a different card or another form of payment."
+  },
+  "name": "safepay-inframe__enrollment__failed",
+  "type": "safepay-inframe-event"
+}
+```
 
-// Possible values:
-// REQUIRED
-// FRICTIONLESS
-// ATTEMPTED
-// UNAVAILABLE
-// FAILED
-// REJECTED
-// NOT_ELIGIBLE
+#### onSafepayError
+Called when an error with Safepay occurs. Example response:
+
+```json
+{
+    "detail": {
+        "error": {
+            "status": 400,
+            "type": "SafepayAPIError"
+        }
+    },
+    "name": "safepay-error",
+    "type": "safepay-inframe-event"
+}
 ```
 
 ## Peer Dependencies
 
 This library relies on your project providing React and React Native. Please ensure you have the following versions installed:
 
-- **react**: `~18.3.1`
-- **react-native**: `~0.76.7`
+- **react**: `>=16.8.0`
+- **react-native**: `>=0.60.0`
+- **react-native-webview**: `>=13.13.2`
 
 ## License
 
 MIT
+
