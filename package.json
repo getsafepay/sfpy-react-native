@@ -2,7 +2,7 @@
   "name": "@sfpy/react-native",
   "author": "Safepay",
   "description": "Official React Native SDK to perform Payer Authentication and Device Data Collection",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "private": false,
   "license": "MIT",
   "main": "dist/index.js",

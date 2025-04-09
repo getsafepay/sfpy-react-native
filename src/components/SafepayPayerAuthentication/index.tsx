@@ -51,7 +51,7 @@ export const SafepayPayerAuthentication = ({
       case ENVIRONMENT.SANDBOX:
         return 'https://sandbox.api.getsafepay.com/drops';
       case ENVIRONMENT.PRODUCTION:
-        return 'https://api.getsafepay.com/drops';
+        return 'https://getsafepay.com/drops';
       default:
         return 'https://dev.api.getsafepay.com/drops';
     }
