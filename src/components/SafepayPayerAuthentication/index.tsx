@@ -18,6 +18,7 @@ import {
   Cardinal3dsSuccessData,
   OnSafepayErrorData,
   PayerAuthEnrollmentFailureError,
+  PayerAuthEnrollmentUnavailableError,
   PendingMessage,
 } from '../../types';
 
@@ -27,8 +28,14 @@ export type SafepayPayerAuthenticationProps = {
   onCardinalError?: (data: Cardinal3dsFailureData) => void;
   onPayerAuthEnrollmentRequired?: () => void;
   onPayerAuthEnrollmentFrictionless?: (data: AuthorizationResponse) => void;
+  /**
+   * @deprecated Use `onPayerAuthEnrollmentUnavailable` instead.
+   */
   onPayerAuthEnrollmentFailure?: (
     error: PayerAuthEnrollmentFailureError,
+  ) => void;
+  onPayerAuthEnrollmentUnavailable?: (
+    error: PayerAuthEnrollmentUnavailableError,
   ) => void;
   environment?: ENVIRONMENT;
   doCaptureOnAuthorization?: boolean;
@@ -42,6 +49,7 @@ export const SafepayPayerAuthentication = ({
   onPayerAuthEnrollmentRequired,
   onPayerAuthEnrollmentFrictionless,
   onPayerAuthEnrollmentFailure,
+  onPayerAuthEnrollmentUnavailable,
   environment: _environment,
   doCaptureOnAuthorization,
   doCardOnFile,
@@ -256,10 +264,16 @@ export const SafepayPayerAuthentication = ({
               onPayerAuthEnrollmentFrictionless(data as AuthorizationResponse);
             break;
           case 'safepay-inframe__enrollment__failed':
-            onPayerAuthEnrollmentFailure &&
+            if (onPayerAuthEnrollmentUnavailable) {
+              onPayerAuthEnrollmentUnavailable(
+                data as PayerAuthEnrollmentUnavailableError,
+              );
+            }
+            if (onPayerAuthEnrollmentFailure) {
               onPayerAuthEnrollmentFailure(
                 data as PayerAuthEnrollmentFailureError,
               );
+            }
             break;
           case 'safepay-error':
             onSafepayError && onSafepayError(data as OnSafepayErrorData);
