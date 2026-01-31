@@ -51,7 +51,8 @@ export default function Index() {
                 onCardinalError={(error: Cardinal3dsFailureData) => console.log("onCardinalError", error)}
                 onPayerAuthEnrollmentRequired={() => console.log("onPayerAuthEnrollmentRequired")}
                 onPayerAuthEnrollmentFrictionless={(data: AuthorizationResponse) => console.log("onPayerAuthEnrollmentFrictionless", data)}
-                onPayerAuthEnrollmentFailure={(error: PayerAuthEnrollmentFailureError) => console.log("onPayerAuthEnrollmentFailure", error)}
+                onPayerAuthEnrollmentUnavailable={(error: PayerAuthEnrollmentUnavailableError) => console.log("onPayerAuthEnrollmentUnavailable", error)}
+                onPayerAuthEnrollmentFailure={(error: PayerAuthEnrollmentFailureError) => console.log("onPayerAuthEnrollmentFailure (deprecated)", error)}
                 onSafepayError={(data) => console.log("onSafepayError", data)}
                 doCaptureOnAuthorization
                 doCardOnFile
@@ -112,8 +113,8 @@ Called when payer authentication enrollment is completed with frictionless authe
 }
 ```
 
-#### onPayerAuthEnrollmentFailure
-Called when payer authentication enrollment fails. Example response:
+#### onPayerAuthEnrollmentUnavailable
+Called when payer authentication enrollment fails/unavailable. Example response:
 
 ```json
 {
@@ -124,6 +125,9 @@ Called when payer authentication enrollment fails. Example response:
   "type": "safepay-inframe-event"
 }
 ```
+
+#### onPayerAuthEnrollmentFailure (deprecated)
+**Deprecated.** Use `onPayerAuthEnrollmentUnavailable` instead. This callback still fires for backward compatibility with the same payload.
 
 #### onSafepayError
 Called when an error with Safepay occurs. Example response:
@@ -152,4 +156,3 @@ This library relies on your project providing React and React Native. Please ens
 ## License
 
 MIT
-
