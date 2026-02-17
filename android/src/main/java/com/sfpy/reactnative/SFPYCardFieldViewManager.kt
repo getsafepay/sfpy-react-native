@@ -15,21 +15,29 @@ class SFPYCardFieldViewManager : SimpleViewManager<SafepayCardFieldView>() {
     override fun createViewInstance(reactContext: ThemedReactContext): SafepayCardFieldView {
         val view = SafepayCardFieldView(reactContext)
 
-        view.setOnCardChangeListener { details ->
-            val event = createCardChangeEvent(details)
-            reactContext
-                .getJSModule(RCTEventEmitter::class.java)
-                .receiveEvent(view.id, EVENT_CARD_CHANGE, event)
-        }
+        view.setOnCardChangeListener(
+            object : SafepayCardFieldView.OnCardChangeListener {
+                override fun onCardChange(details: SafepayCardFieldView.CardFieldDetails) {
+                    val event = createCardChangeEvent(details)
+                    reactContext
+                        .getJSModule(RCTEventEmitter::class.java)
+                        .receiveEvent(view.id, EVENT_CARD_CHANGE, event)
+                }
+            },
+        )
 
-        view.setOnFocusChangeListener { focus ->
-            val event = Arguments.createMap().apply {
-                putString("focusedField", focus?.name ?: "")
-            }
-            reactContext
-                .getJSModule(RCTEventEmitter::class.java)
-                .receiveEvent(view.id, EVENT_FOCUS_CHANGE, event)
-        }
+        view.setOnFocusChangeListener(
+            object : SafepayCardFieldView.OnFocusChangeListener {
+                override fun onFocusChange(focusedField: SafepayCardFieldView.FocusField?) {
+                    val event = Arguments.createMap().apply {
+                        putString("focusedField", focusedField?.name ?: "")
+                    }
+                    reactContext
+                        .getJSModule(RCTEventEmitter::class.java)
+                        .receiveEvent(view.id, EVENT_FOCUS_CHANGE, event)
+                }
+            },
+        )
 
         return view
     }
