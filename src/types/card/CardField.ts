@@ -24,3 +24,25 @@ export type CardFieldMethods = {
   blur(): void;
   clear(): void;
 };
+
+export type CardCapturePaymentMethod = {
+  token: string;
+  expirationMonth: string;
+  expirationYear: string;
+  cardTypeCode: string;
+  cardType: string;
+  binNumber: string;
+  lastFour: string;
+};
+
+export type CardCaptureProceedToAuthenticationData = {
+  accessToken: string;
+  deviceDataCollectionURL: string;
+  cardinalJWT?: string | null;
+  paymentMethod: CardCapturePaymentMethod;
+};
+
+export type CardCaptureError = {
+  code?: string | null;
+  message: string;
+};

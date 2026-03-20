@@ -13,6 +13,9 @@ class SfpyReactNativePackage : ReactPackage {
     override fun createViewManagers(
         reactContext: ReactApplicationContext,
     ): List<ViewManager<*, *>> {
-        return listOf(SFPYCardFieldViewManager())
+        return listOf(
+            SFPYCardFieldViewManager(),
+            SFPYCardCaptureViewManager(),
+        )
     }
 }
