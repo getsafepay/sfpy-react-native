@@ -22,6 +22,7 @@ The native bridge now:
 - owns `submit()` and the `PAYER_AUTH_SETUP` network call
 - emits `onReady`, `onValidated`, `onError`, and `onProceedToAuthentication`
 - keeps raw card submission data native-side
+- normalizes optional Swift payload fields into React Native dictionaries before emitting them
 
 ## JS responsibilities now covered
 The JS `CardCapture` component now:

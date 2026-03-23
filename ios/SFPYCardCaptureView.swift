@@ -171,30 +171,30 @@ class SFPYCardCaptureView: UIView {
     }
 
     private func emitError(code: String?, message: String) {
-        onError?([
-            "error": [
-                "code": code ?? NSNull(),
-                "message": message,
-            ]
-        ])
+        let errorPayload: [String: Any] = [
+            "code": code ?? NSNull(),
+            "message": message,
+        ]
+
+        onError?(["error": errorPayload])
     }
 
     private func emitProceed(_ result: SafepayCardCaptureResult) {
-        onProceedToAuthentication?([
-            "result": [
-                "accessToken": result.accessToken,
-                "deviceDataCollectionURL": result.deviceDataCollectionURL,
-                "cardinalJWT": result.cardinalJWT ?? NSNull(),
-                "paymentMethod": [
-                    "token": result.paymentMethod.token,
-                    "expirationMonth": result.paymentMethod.expirationMonth,
-                    "expirationYear": result.paymentMethod.expirationYear,
-                    "cardTypeCode": result.paymentMethod.cardTypeCode,
-                    "cardType": result.paymentMethod.cardType,
-                    "binNumber": result.paymentMethod.binNumber,
-                    "lastFour": result.paymentMethod.lastFour,
-                ],
-            ]
-        ])
+        let resultPayload: [String: Any] = [
+            "accessToken": result.accessToken,
+            "deviceDataCollectionURL": result.deviceDataCollectionURL,
+            "cardinalJWT": result.cardinalJWT ?? NSNull(),
+            "paymentMethod": [
+                "token": result.paymentMethod.token,
+                "expirationMonth": result.paymentMethod.expirationMonth,
+                "expirationYear": result.paymentMethod.expirationYear,
+                "cardTypeCode": result.paymentMethod.cardTypeCode,
+                "cardType": result.paymentMethod.cardType,
+                "binNumber": result.paymentMethod.binNumber,
+                "lastFour": result.paymentMethod.lastFour,
+            ],
+        ]
+
+        onProceedToAuthentication?(["result": resultPayload])
     }
 }
