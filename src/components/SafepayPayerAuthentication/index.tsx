@@ -75,7 +75,10 @@ export const SafepayPayerAuthentication = ({
   };
 
   const baseUrl = getBaseUrl();
-  const deviceUrl = `${baseUrl}/authlink`;
+  const bridgeOrigin = new URL(baseUrl).origin;
+  const deviceUrl = `${baseUrl}/authlink?parentOrigin=${encodeURIComponent(
+    bridgeOrigin,
+  )}`;
 
   const webViewRef = useRef<WebView>(null);
   const isReadyRef = useRef(false);
@@ -142,14 +145,14 @@ export const SafepayPayerAuthentication = ({
     if (!webViewRef.current) return;
     const script = `
       if (window.postMessage) {
-        window.postMessage(${JSON.stringify(payload)}, "*");
+        window.postMessage(${JSON.stringify(payload)}, "${bridgeOrigin}");
       } else {
         console.error("postMessage is not supported");
       }
       true;
     `;
     webViewRef.current.injectJavaScript(script);
-  }, []);
+  }, [bridgeOrigin]);
 
   const dispatchMessage = useCallback(
     (entry: PendingMessage) => {
