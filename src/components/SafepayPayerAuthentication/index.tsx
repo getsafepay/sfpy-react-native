@@ -17,6 +17,9 @@ import {
   Cardinal3dsFailureData,
   Cardinal3dsSuccessData,
   OnSafepayErrorData,
+  PayerAuthenticationData,
+  PayerAuthenticationErrorData,
+  PayerAuthenticationSuccessData,
   PayerAuthEnrollmentFailureError,
   PayerAuthEnrollmentUnavailableError,
   PendingMessage,
@@ -24,16 +27,36 @@ import {
 
 export type SafepayPayerAuthenticationProps = {
   onSafepayError?: (data: OnSafepayErrorData) => void;
+  onPayerAuthenticationSuccess?: (data: PayerAuthenticationSuccessData) => void;
+  onPayerAuthenticationFailure?: (data: PayerAuthenticationErrorData) => void;
+  onPayerAuthenticationRequired?: (data: PayerAuthenticationData) => void;
+  onPayerAuthenticationFrictionless?: (data: PayerAuthenticationData) => void;
+  onPayerAuthenticationUnavailable?: (data: PayerAuthenticationData) => void;
+  /**
+   * @deprecated Use `onPayerAuthenticationSuccess` instead.
+   */
   onCardinalSuccess?: (data: Cardinal3dsSuccessData) => void;
+  /**
+   * @deprecated Use `onPayerAuthenticationFailure` instead.
+   */
   onCardinalError?: (data: Cardinal3dsFailureData) => void;
+  /**
+   * @deprecated Use `onPayerAuthenticationRequired` instead.
+   */
   onPayerAuthEnrollmentRequired?: () => void;
+  /**
+   * @deprecated Use `onPayerAuthenticationFrictionless` instead.
+   */
   onPayerAuthEnrollmentFrictionless?: (data: AuthorizationResponse) => void;
   /**
-   * @deprecated Use `onPayerAuthEnrollmentUnavailable` instead.
+   * @deprecated Use `onPayerAuthenticationUnavailable` instead.
    */
   onPayerAuthEnrollmentFailure?: (
     error: PayerAuthEnrollmentFailureError,
   ) => void;
+  /**
+   * @deprecated Use `onPayerAuthenticationUnavailable` instead.
+   */
   onPayerAuthEnrollmentUnavailable?: (
     error: PayerAuthEnrollmentUnavailableError,
   ) => void;
@@ -44,6 +67,11 @@ export type SafepayPayerAuthenticationProps = {
 
 export const SafepayPayerAuthentication = ({
   onSafepayError,
+  onPayerAuthenticationSuccess,
+  onPayerAuthenticationFailure,
+  onPayerAuthenticationRequired,
+  onPayerAuthenticationFrictionless,
+  onPayerAuthenticationUnavailable,
   onCardinalSuccess,
   onCardinalError,
   onPayerAuthEnrollmentRequired,
@@ -75,7 +103,10 @@ export const SafepayPayerAuthentication = ({
   };
 
   const baseUrl = getBaseUrl();
-  const deviceUrl = `${baseUrl}/authlink`;
+  const bridgeOrigin = new URL(baseUrl).origin;
+  const deviceUrl = `${baseUrl}/authlink?parentOrigin=${encodeURIComponent(
+    bridgeOrigin,
+  )}`;
 
   const webViewRef = useRef<WebView>(null);
   const isReadyRef = useRef(false);
@@ -142,14 +173,14 @@ export const SafepayPayerAuthentication = ({
     if (!webViewRef.current) return;
     const script = `
       if (window.postMessage) {
-        window.postMessage(${JSON.stringify(payload)}, "*");
+        window.postMessage(${JSON.stringify(payload)}, "${bridgeOrigin}");
       } else {
         console.error("postMessage is not supported");
       }
       true;
     `;
     webViewRef.current.injectJavaScript(script);
-  }, []);
+  }, [bridgeOrigin]);
 
   const dispatchMessage = useCallback(
     (entry: PendingMessage) => {
@@ -222,6 +253,33 @@ export const SafepayPayerAuthentication = ({
     [],
   );
 
+  const buildPayerAuthenticationData = useCallback(
+    (data: Partial<PayerAuthenticationData>): PayerAuthenticationData => ({
+      tracker: data.tracker || tracker,
+      request_id: data.request_id,
+    }),
+    [tracker],
+  );
+
+  const buildPayerAuthenticationErrorData = useCallback(
+    (data: Partial<PayerAuthenticationErrorData>): PayerAuthenticationErrorData => ({
+      ...buildPayerAuthenticationData(data),
+      error: data.error || 'Unknown payer authentication error',
+    }),
+    [buildPayerAuthenticationData],
+  );
+
+  const buildPayerAuthenticationSuccessData = useCallback(
+    (
+      data: Partial<PayerAuthenticationSuccessData>,
+    ): PayerAuthenticationSuccessData => ({
+      ...buildPayerAuthenticationData(data),
+      authorization: data.authorization,
+      payment_method: data.payment_method,
+    }),
+    [buildPayerAuthenticationData],
+  );
+
   const onMessage = useCallback(
     (event: WebViewMessageEvent) => {
       try {
@@ -249,21 +307,50 @@ export const SafepayPayerAuthentication = ({
             }
             break;
           }
-          case 'safepay-inframe__cardinal-3ds__success':
+          case 'safepay-inframe__cardinal-3ds__success': {
+            const successData = buildPayerAuthenticationSuccessData(
+              data as PayerAuthenticationSuccessData,
+            );
+            onPayerAuthenticationSuccess &&
+              onPayerAuthenticationSuccess(successData);
             onCardinalSuccess &&
               onCardinalSuccess(data as Cardinal3dsSuccessData);
             break;
-          case 'safepay-inframe__cardinal-3ds__failure':
+          }
+          case 'safepay-inframe__cardinal-3ds__failure': {
+            const failureData = buildPayerAuthenticationErrorData(
+              data as PayerAuthenticationErrorData,
+            );
+            onPayerAuthenticationFailure &&
+              onPayerAuthenticationFailure(failureData);
             onCardinalError && onCardinalError(data as Cardinal3dsFailureData);
             break;
-          case 'safepay-inframe__enrollment__required':
+          }
+          case 'safepay-inframe__enrollment__required': {
+            const requiredData = buildPayerAuthenticationData(
+              data as PayerAuthenticationData,
+            );
+            onPayerAuthenticationRequired &&
+              onPayerAuthenticationRequired(requiredData);
             onPayerAuthEnrollmentRequired && onPayerAuthEnrollmentRequired();
             break;
-          case 'safepay-inframe__enrollment__frictionless':
+          }
+          case 'safepay-inframe__enrollment__frictionless': {
+            const frictionlessData = buildPayerAuthenticationData(
+              data as PayerAuthenticationData,
+            );
+            onPayerAuthenticationFrictionless &&
+              onPayerAuthenticationFrictionless(frictionlessData);
             onPayerAuthEnrollmentFrictionless &&
               onPayerAuthEnrollmentFrictionless(data as AuthorizationResponse);
             break;
-          case 'safepay-inframe__enrollment__failed':
+          }
+          case 'safepay-inframe__enrollment__failed': {
+            const unavailableData = buildPayerAuthenticationData(
+              data as PayerAuthenticationData,
+            );
+            onPayerAuthenticationUnavailable &&
+              onPayerAuthenticationUnavailable(unavailableData);
             if (onPayerAuthEnrollmentUnavailable) {
               onPayerAuthEnrollmentUnavailable(
                 data as PayerAuthEnrollmentUnavailableError,
@@ -275,6 +362,7 @@ export const SafepayPayerAuthentication = ({
               );
             }
             break;
+          }
           case 'safepay-error':
             onSafepayError && onSafepayError(data as OnSafepayErrorData);
             break;
@@ -283,7 +371,23 @@ export const SafepayPayerAuthentication = ({
         console.log(e);
       }
     },
-    [onCardinalSuccess, onCardinalError, onSafepayError],
+    [
+      buildPayerAuthenticationData,
+      buildPayerAuthenticationErrorData,
+      buildPayerAuthenticationSuccessData,
+      onCardinalError,
+      onCardinalSuccess,
+      onPayerAuthenticationFailure,
+      onPayerAuthenticationFrictionless,
+      onPayerAuthenticationRequired,
+      onPayerAuthenticationSuccess,
+      onPayerAuthenticationUnavailable,
+      onPayerAuthEnrollmentFailure,
+      onPayerAuthEnrollmentFrictionless,
+      onPayerAuthEnrollmentRequired,
+      onPayerAuthEnrollmentUnavailable,
+      onSafepayError,
+    ],
   );
 
   return (
