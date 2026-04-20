@@ -47,6 +47,11 @@ export default function Index() {
         <SafepayContext.Provider value={values}>
             <SafepayPayerAuthentication
                 environment={ENVIRONMENT.DEVELOPMENT}
+                onPayerAuthenticationSuccess={(data) => console.log("onPayerAuthenticationSuccess", data)}
+                onPayerAuthenticationFailure={(data) => console.log("onPayerAuthenticationFailure", data)}
+                onPayerAuthenticationRequired={(data) => console.log("onPayerAuthenticationRequired", data)}
+                onPayerAuthenticationFrictionless={(data) => console.log("onPayerAuthenticationFrictionless", data)}
+                onPayerAuthenticationUnavailable={(data) => console.log("onPayerAuthenticationUnavailable", data)}
                 onCardinalSuccess={(data: Cardinal3dsSuccessData) => console.log("onCardinalSuccess", data)}
                 onCardinalError={(error: Cardinal3dsFailureData) => console.log("onCardinalError", error)}
                 onPayerAuthEnrollmentRequired={() => console.log("onPayerAuthEnrollmentRequired")}
@@ -62,11 +67,55 @@ export default function Index() {
 };
 ```
 
+### SafepayPayerAuthentication Props
+
+| Property | Type | Description |
+|---|---|---|
+| environment | `'development' \| 'production' \| 'sandbox' \| 'local'` | Environment setting |
+| doCaptureOnAuthorization | boolean | Enables capture during authorization |
+| doCardOnFile | boolean | Enables card-on-file during authorization |
+| onPayerAuthenticationSuccess | function | Atoms-compatible callback for successful 3DS completion |
+| onPayerAuthenticationFailure | function | Atoms-compatible callback for failed 3DS completion |
+| onPayerAuthenticationRequired | function | Atoms-compatible callback for enrollment-required events |
+| onPayerAuthenticationFrictionless | function | Atoms-compatible callback for frictionless enrollment events |
+| onPayerAuthenticationUnavailable | function | Atoms-compatible callback for unavailable enrollment events |
+| onSafepayError | function | Callback for Safepay iframe errors |
+| onCardinalSuccess | function | Deprecated alias for `onPayerAuthenticationSuccess` |
+| onCardinalError | function | Deprecated alias for `onPayerAuthenticationFailure` |
+| onPayerAuthEnrollmentRequired | function | Deprecated alias for `onPayerAuthenticationRequired` |
+| onPayerAuthEnrollmentFrictionless | function | Deprecated alias for `onPayerAuthenticationFrictionless` |
+| onPayerAuthEnrollmentUnavailable | function | Deprecated alias for `onPayerAuthenticationUnavailable` |
+| onPayerAuthEnrollmentFailure | function | Deprecated alias for `onPayerAuthenticationUnavailable` |
+
 ### SafepayPayerAuthentication Callbacks
 
-The component accepts several callbacks that receive response payloads. Below are example responses:
+The component accepts atoms-compatible callbacks and keeps the older React Native callback names for backward compatibility.
 
-#### onCardinalSuccess
+#### Atoms-compatible callbacks
+
+| Callback | Payload | Description |
+|---|---|---|
+| onPayerAuthenticationSuccess | `{ tracker, request_id, payment_method?, authorization? }` | Fired when Cardinal 3DS succeeds |
+| onPayerAuthenticationFailure | `{ tracker, request_id, error }` | Fired when Cardinal 3DS fails |
+| onPayerAuthenticationRequired | `{ tracker, request_id? }` | Fired when payer authentication enrollment is required |
+| onPayerAuthenticationFrictionless | `{ tracker, request_id? }` | Fired when payer authentication completes frictionlessly |
+| onPayerAuthenticationUnavailable | `{ tracker, request_id? }` | Fired when payer authentication enrollment is unavailable |
+| onSafepayError | `{ error: SafepayError }` | Fired when Safepay returns an iframe-level error |
+
+#### Deprecated callbacks
+
+| Callback | Status | Notes |
+|---|---|---|
+| onCardinalSuccess | Deprecated | Use `onPayerAuthenticationSuccess` |
+| onCardinalError | Deprecated | Use `onPayerAuthenticationFailure` |
+| onPayerAuthEnrollmentRequired | Deprecated | Use `onPayerAuthenticationRequired` |
+| onPayerAuthEnrollmentFrictionless | Deprecated | Use `onPayerAuthenticationFrictionless` |
+| onPayerAuthEnrollmentUnavailable | Deprecated | Use `onPayerAuthenticationUnavailable` |
+| onPayerAuthEnrollmentFailure | Deprecated | Use `onPayerAuthenticationUnavailable` |
+
+Below are example responses:
+
+#### onPayerAuthenticationSuccess / onCardinalSuccess
 Called when Cardinal 3DS authentication succeeds. Example response:
 
 ```json
@@ -81,7 +130,7 @@ Called when Cardinal 3DS authentication succeeds. Example response:
 }
 ```
 
-#### onCardinalError
+#### onPayerAuthenticationFailure / onCardinalError
 Called when Cardinal 3DS authentication fails. Example response:
 
 ```json
@@ -96,10 +145,18 @@ Called when Cardinal 3DS authentication fails. Example response:
 }
 ```
 
-#### onPayerAuthEnrollmentRequired
-Called when payer authentication enrollment is required but receives no response data.
+#### onPayerAuthenticationRequired / onPayerAuthEnrollmentRequired
+Called when payer authentication enrollment is required. The new callback receives normalized payload data; the deprecated callback still fires without arguments for backward compatibility.
 
-#### onPayerAuthEnrollmentFrictionless
+Atoms-compatible payload:
+
+```json
+{
+  "tracker": "track_a098c800-a24b-4eb2-ab62-aa8967a099df"
+}
+```
+
+#### onPayerAuthenticationFrictionless / onPayerAuthEnrollmentFrictionless
 Called when payer authentication enrollment is completed with frictionless authentication. Example response:
 
 ```json
@@ -113,8 +170,18 @@ Called when payer authentication enrollment is completed with frictionless authe
 }
 ```
 
-#### onPayerAuthEnrollmentUnavailable
-Called when payer authentication enrollment fails/unavailable. Example response:
+#### onPayerAuthenticationUnavailable / onPayerAuthEnrollmentUnavailable
+Called when payer authentication enrollment fails/unavailable.
+
+Atoms-compatible payload:
+
+```json
+{
+  "tracker": "track_c6ead7f5-681c-469e-ab9f-4f2cc1f144e8"
+}
+```
+
+Deprecated callback payload:
 
 ```json
 {
