@@ -257,6 +257,7 @@ export const SafepayPayerAuthentication = ({
     (data: Partial<PayerAuthenticationData>): PayerAuthenticationData => ({
       tracker: data.tracker || tracker,
       request_id: data.request_id,
+      errorMessage: data.errorMessage,
     }),
     [tracker],
   );

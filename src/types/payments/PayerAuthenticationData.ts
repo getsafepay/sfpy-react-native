@@ -1,6 +1,7 @@
 export type PayerAuthenticationData = {
     tracker: string;
     request_id?: string;
+    errorMessage?: string;
 };
 
 export type PayerAuthenticationErrorData = PayerAuthenticationData & {
