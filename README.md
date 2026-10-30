@@ -20,6 +20,44 @@ In your React Native project, import the components and hooks as named exports:
 import { SafepayPayerAuthentication, SafepayContext, EnrollmentAuthenticationStatus, Cardinal3dsSuccessData, Cardinal3dsFailureData, AuthorizationResponse, PayerAuthEnrollmentFailureError } from "@sfpy/react-native";
 ```
 
+## Native Card Capture (embedded)
+
+This package now exposes an embedded native card input via `CardField` and a lightweight `CardCapture` wrapper.
+
+### iOS setup
+
+Make sure `SafepayiOSSDK` is available to CocoaPods (local path or published pod). Example Podfile entry:
+
+```
+pod 'SafepayiOSSDK', :path => '../safepay-ios-sdk'
+```
+
+### Android setup
+
+The Android SDK module must be included in your app Gradle settings as `:safePay`, then depended on by this library.
+If using the repo as a git submodule, include:
+
+```
+include(":safePay")
+project(":safePay").projectDir = new File(rootProject.projectDir, "../safepay-android-sdk/safePay")
+```
+
+### Example usage
+
+```tsx
+import { CardField } from "@sfpy/react-native";
+
+export function PaymentForm() {
+  return (
+    <CardField
+      onCardChange={(card) => console.log("card", card)}
+      dangerouslyGetFullCardDetails={false}
+      style={{ height: 120 }}
+    />
+  );
+}
+```
+
 ## Example usage
 
 Use the SafepayPayerAuthentication in the following way using the SafepayContext.
