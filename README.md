@@ -34,12 +34,12 @@ pod 'SafepayiOSSDK', :path => '../safepay-ios-sdk'
 
 ### Android setup
 
-The Android SDK module must be included in your app Gradle settings as `:safePay`, then depended on by this library.
+The Android SDK's card module must be included in your app Gradle settings as `:safePayCard`, then depended on by this library. It has no Cardinal Mobile SDK dependency, so no Cardinal Maven credentials are needed.
 If using the repo as a git submodule, include:
 
 ```
-include(":safePay")
-project(":safePay").projectDir = new File(rootProject.projectDir, "../safepay-android-sdk/safePay")
+include(":safePayCard")
+project(":safePayCard").projectDir = new File(rootProject.projectDir, "../safepay-android-sdk/safePayCard")
 ```
 
 ### Example usage
