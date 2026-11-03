@@ -5,7 +5,6 @@
 @interface RCT_EXTERN_MODULE(SFPYCardField, RCTViewManager)
 RCT_EXPORT_VIEW_PROPERTY(onCardChange, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onFocusChange, RCTDirectEventBlock)
-RCT_EXPORT_VIEW_PROPERTY(dangerouslyGetFullCardDetails, BOOL)
 RCT_EXPORT_VIEW_PROPERTY(disabled, BOOL)
 RCT_EXPORT_VIEW_PROPERTY(autofocus, BOOL)
 RCT_EXTERN_METHOD(focus:(nonnull NSNumber*) reactTag)

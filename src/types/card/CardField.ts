@@ -13,8 +13,6 @@ export type CardFieldDetails = {
   validExpiryDate?: CardFieldValidationState;
   validNumber?: CardFieldValidationState;
   validCVC?: CardFieldValidationState;
-  number?: string;
-  cvc?: string;
 };
 
 export type CardFieldFocusField = 'CardNumber' | 'ExpiryDate' | 'Cvc';

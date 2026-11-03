@@ -42,11 +42,6 @@ class SFPYCardFieldViewManager : SimpleViewManager<SafepayCardFieldView>() {
         return view
     }
 
-    @ReactProp(name = "dangerouslyGetFullCardDetails")
-    fun setDangerouslyGetFullCardDetails(view: SafepayCardFieldView, value: Boolean) {
-        view.dangerouslyGetFullCardDetails = value
-    }
-
     @ReactProp(name = "disabled")
     fun setDisabled(view: SafepayCardFieldView, disabled: Boolean) {
         view.setDisabled(disabled)
@@ -96,8 +91,6 @@ class SFPYCardFieldViewManager : SimpleViewManager<SafepayCardFieldView>() {
             putString("validNumber", details.validNumber)
             putString("validCVC", details.validCvc)
             putString("validExpiryDate", details.validExpiryDate)
-            details.number?.let { putString("number", it) }
-            details.cvc?.let { putString("cvc", it) }
         }
 
         return Arguments.createMap().apply {

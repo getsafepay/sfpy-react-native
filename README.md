@@ -52,7 +52,7 @@ project(':safePayCard').projectDir = new File(rootDir, '../safepay-android-sdk/s
 
 ## Accepting a card payment
 
-Card details are entered and sent to Safepay entirely in native code. Your JavaScript never sees the card number or CVV, only the brand, last four digits and validation state.
+Card details are entered and sent to Safepay entirely in native code. Your JavaScript never sees the card number or CVC, only the brand, last four digits, expiry and validation state; there is no option to read them. This keeps raw card data out of your app.
 
 1. **On your server**, create a payment tracker and a time-based token (TBT) for it, and pass both to the app.
 2. **Render `CardCapture`** with the tracker, the TBT as `authToken`, and the environment the tracker was created in.
@@ -224,7 +224,6 @@ const ref = useRef<CardFieldMethods>(null);
 | `onBlur` | `() => void` | Called when the field loses focus. |
 | `disabled` | `boolean` | Disables the inputs. |
 | `autofocus` | `boolean` | Focuses the card number input when the view appears. |
-| `dangerouslyGetFullCardDetails` | `boolean` | Adds the full `number` and `cvc` to `onCardChange`. **Avoid this:** it puts raw card data in JavaScript, which brings your app into PCI DSS scope. |
 
 The ref exposes `focus()`, `blur()` and `clear()`.
 

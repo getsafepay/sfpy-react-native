@@ -31,7 +31,6 @@ export interface CardFieldProps extends ViewProps {
   style?: StyleProp<ViewStyle>;
   autofocus?: boolean;
   disabled?: boolean;
-  dangerouslyGetFullCardDetails?: boolean;
   onCardChange?(card: CardFieldDetails): void;
   onFocus?(focusedField: CardFieldFocusField): void;
   onBlur?(): void;
@@ -40,7 +39,6 @@ export interface CardFieldProps extends ViewProps {
 type NativeProps = ViewProps & {
   autofocus?: boolean;
   disabled?: boolean;
-  dangerouslyGetFullCardDetails?: boolean;
   onCardChange?: (event: NativeSyntheticEvent<NativeCardChangeEvent>) => void;
   onFocusChange?: (event: NativeSyntheticEvent<NativeFocusChangeEvent>) => void;
 };
@@ -65,7 +63,6 @@ export const CardField = forwardRef<CardFieldMethods, CardFieldProps>(
       onBlur,
       autofocus,
       disabled,
-      dangerouslyGetFullCardDetails,
       ...props
     },
     ref
@@ -104,7 +101,6 @@ export const CardField = forwardRef<CardFieldMethods, CardFieldProps>(
         onFocusChange={onFocusChangeHandler}
         autofocus={autofocus ?? false}
         disabled={disabled ?? false}
-        dangerouslyGetFullCardDetails={dangerouslyGetFullCardDetails ?? false}
         {...props}
       />
     );

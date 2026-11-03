@@ -7,11 +7,6 @@ import UIKit
 class SFPYCardFieldView: UIView {
     @objc var onCardChange: RCTDirectEventBlock?
     @objc var onFocusChange: RCTDirectEventBlock?
-    @objc var dangerouslyGetFullCardDetails: Bool = false {
-        didSet {
-            cardFieldView.dangerouslyGetFullCardDetails = dangerouslyGetFullCardDetails
-        }
-    }
     @objc var disabled: Bool = false {
         didSet {
             cardFieldView.isUserInteractionEnabled = !disabled
@@ -89,13 +84,6 @@ class SFPYCardFieldView: UIView {
             card["expiryYear"] = expiryYear
         } else {
             card["expiryYear"] = NSNull()
-        }
-
-        if let number = details.number {
-            card["number"] = number
-        }
-        if let cvc = details.cvc {
-            card["cvc"] = cvc
         }
 
         onCardChange?(["card": card])
