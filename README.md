@@ -2,27 +2,234 @@
 
 A React Native library for Safepay integration that provides components, hooks, and types to help you quickly integrate Safepay functionality into your React Native projects.
 
+## Contents
+
+- [Installation](#installation)
+- [Native setup](#native-setup)
+- [Accepting a card payment](#accepting-a-card-payment)
+- [CardCapture](#cardcapture)
+- [CardField](#cardfield)
+- [SafepayPayerAuthentication](#safepaypayerauthentication)
+
 ## Installation
 
-Once the package is published on npm, simply run:
-
 ```sh
-npm install @sfpy/react-native
+npm install @sfpy/react-native react-native-webview
 # or
-yarn add @sfpy/react-native
+yarn add @sfpy/react-native react-native-webview
 ```
 
-## Usage
+The card inputs are native views, so the app needs a native build. **Expo Go is not supported.** With Expo, use a [development build](https://docs.expo.dev/develop/development-builds/introduction/) (`npx expo run:ios` / `npx expo run:android`).
 
-In your React Native project, import the components and hooks as named exports:
+## Native setup
 
-```javascript
-import { SafepayPayerAuthentication, SafepayContext, EnrollmentAuthenticationStatus, Cardinal3dsSuccessData, Cardinal3dsFailureData, AuthorizationResponse, PayerAuthEnrollmentFailureError } from "@sfpy/react-native";
+The card inputs come from Safepay's native SDKs, which you add to your app's iOS and Android projects.
+
+### iOS
+
+Requires iOS 15.1 or later. Add the Safepay iOS SDK to your `ios/Podfile`:
+
+```ruby
+pod 'SafepayiOSSDK', :git => 'https://github.com/getsafepay/safepay-ios-sdk.git', :branch => 'main'
 ```
 
-## Example usage
+Then run `cd ios && pod install`. The `sfpy-react-native` pod itself is autolinked.
 
-Use the SafepayPayerAuthentication in the following way using the SafepayContext.
+### Android
+
+Requires `minSdkVersion` 24 or later and Java 17. The library depends on the `safePayCard` module of the [Safepay Android SDK](https://github.com/getsafepay/safepay-android-sdk), which you include from a checkout of that repository (for example as a git submodule or a sibling folder). Add it to `android/settings.gradle`, adjusting the path to where the checkout lives:
+
+```groovy
+include ':safePayCard'
+project(':safePayCard').projectDir = new File(rootDir, '../safepay-android-sdk/safePayCard')
+```
+
+`safePayCard` doesn't depend on the Cardinal Mobile SDK, so no Cardinal Maven credentials are needed.
+
+### Expo
+
+`expo prebuild --clean` regenerates `ios/` and `android/` and drops the Podfile and `settings.gradle` lines above. Either commit the native folders and stop regenerating them, or re-apply the lines after each prebuild.
+
+## Accepting a card payment
+
+Card details are entered and sent to Safepay entirely in native code. Your JavaScript never sees the card number or CVC, only the brand, last four digits, expiry and validation state; there is no option to read them. This keeps raw card data out of your app.
+
+1. **On your server**, create a payment tracker and a time-based token (TBT) for it, and pass both to the app.
+2. **Render `CardCapture`** with the tracker, the TBT as `authToken`, and the environment the tracker was created in.
+3. **Call `submit()`** when the customer pays. The native SDK sends the card to Safepay and creates a payment method.
+4. **`onProceedToAuthentication`** fires with the payment method and the details needed for 3-D Secure.
+5. **Render `SafepayPayerAuthentication`** inside a `SafepayContext` with those details. It runs device data collection and 3-D Secure, and reports the outcome through its callbacks.
+
+```tsx
+import { useRef, useState } from "react";
+import { Button, Modal } from "react-native";
+import {
+  CardCapture,
+  CardCaptureMethods,
+  CardCaptureProceedToAuthenticationData,
+  ENVIRONMENT,
+  SafepayContext,
+  SafepayPayerAuthentication,
+} from "@sfpy/react-native";
+
+type Props = {
+  tracker: string; // from your server
+  tbt: string; // from your server
+};
+
+export function Checkout({ tracker, tbt }: Props) {
+  const cardCaptureRef = useRef<CardCaptureMethods | null>(null);
+  const [complete, setComplete] = useState(false);
+  const [setup, setSetup] = useState<CardCaptureProceedToAuthenticationData | null>(null);
+
+  return (
+    <>
+      <CardCapture
+        imperativeRef={cardCaptureRef}
+        environment={ENVIRONMENT.SANDBOX}
+        authToken={tbt}
+        tracker={tracker}
+        onCardChange={card => setComplete(card.complete)}
+        onError={error => console.warn(error.code, error.message)}
+        onProceedToAuthentication={setSetup}
+        style={{ height: 120 }}
+      />
+      <Button title="Pay" disabled={!complete} onPress={() => cardCaptureRef.current?.submit()} />
+
+      <Modal visible={setup !== null} transparent>
+        {setup ? (
+          <SafepayContext.Provider
+            value={{
+              clientSecret: tbt,
+              tracker,
+              deviceDataCollectionJWT: setup.accessToken,
+              deviceDataCollectionURL: setup.deviceDataCollectionURL,
+              // Billing address
+              street_1: "St 12",
+              street_2: "",
+              city: "Islamabad",
+              state: "",
+              postal_code: "44000",
+              country: "PK",
+            }}
+          >
+            <SafepayPayerAuthentication
+              environment={ENVIRONMENT.SANDBOX}
+              doCaptureOnAuthorization
+              onPayerAuthenticationSuccess={data => console.log("Paid", data)}
+              onPayerAuthenticationFrictionless={data => console.log("Paid", data)}
+              onPayerAuthenticationFailure={data => console.warn("3DS failed", data)}
+              onPayerAuthenticationUnavailable={data => console.warn("3DS unavailable", data)}
+              onSafepayError={data => console.warn("Safepay error", data)}
+            />
+          </SafepayContext.Provider>
+        ) : null}
+      </Modal>
+    </>
+  );
+}
+```
+
+The [example app](https://github.com/getsafepay/safepay-react-native-sdk-example) has a complete, runnable version of this flow.
+
+The environment must match the one the tracker and TBT were created in. A mismatch, or an expired TBT, makes `submit()` fail with an authorization error.
+
+## CardCapture
+
+A native card number, expiry and CVC input that sends the card to Safepay when you call `submit()`.
+
+### Props
+
+| Prop | Type | Description |
+|---|---|---|
+| `imperativeRef` | `MutableRefObject<CardCaptureMethods \| null>` | **Required.** Receives the methods below. |
+| `environment` | `ENVIRONMENT` | **Required.** `DEVELOPMENT`, `SANDBOX` or `PRODUCTION`. `LOCAL` is not supported. |
+| `authToken` | `string` | **Required.** The time-based token (TBT) for the tracker. |
+| `tracker` | `string` | **Required.** The payment tracker token (`track_…`). |
+| `onReady` | `() => void` | Called once `environment`, `authToken` and `tracker` are all set. |
+| `onCardChange` | `(card: CardFieldDetails) => void` | Called as the customer types. Contains no card number or CVC. |
+| `onValidated` | `() => void` | Called when Safepay accepts the card, just before `onProceedToAuthentication`. |
+| `onProceedToAuthentication` | `(data: CardCaptureProceedToAuthenticationData) => void` | Called with the result of `submit()`. |
+| `onError` | `(error: CardCaptureError) => void` | Called when `submit()` fails. |
+| `disabled` | `boolean` | Disables the inputs. |
+| `autofocus` | `boolean` | Focuses the card number input when the view appears. |
+| `style` | `ViewStyle` | Give the view a height (about 120). |
+
+### Methods (`imperativeRef.current`)
+
+| Method | Description |
+|---|---|
+| `submit()` | Sends the card to Safepay. The result arrives through `onProceedToAuthentication` or `onError`. If the card is incomplete, `onError` fires with code `PT-1002` and nothing is sent. |
+| `validate()` | Returns `true` if the card details are complete and valid. |
+| `fetchValidity()` | Async version of `validate()`. |
+| `clear()` | Clears all inputs. |
+
+### Types
+
+```ts
+type CardFieldDetails = {
+  complete: boolean;
+  brand?: string | null; // e.g. "visa", "mastercard"
+  last4?: string;
+  expiryMonth?: number | null;
+  expiryYear?: number | null;
+  validNumber?: "Valid" | "Invalid" | "Incomplete" | "Unknown";
+  validExpiryDate?: "Valid" | "Invalid" | "Incomplete" | "Unknown";
+  validCVC?: "Valid" | "Invalid" | "Incomplete" | "Unknown";
+};
+
+type CardCaptureProceedToAuthenticationData = {
+  accessToken: string; // pass to SafepayContext as deviceDataCollectionJWT
+  deviceDataCollectionURL: string; // pass to SafepayContext as deviceDataCollectionURL
+  cardinalJWT?: string | null;
+  paymentMethod: {
+    token: string;
+    expirationMonth: string;
+    expirationYear: string;
+    cardTypeCode: string;
+    cardType: string;
+    binNumber: string;
+    lastFour: string;
+  };
+};
+
+type CardCaptureError = {
+  code?: string | null;
+  message: string;
+};
+```
+
+## CardField
+
+The card input on its own, without sending the card anywhere. Use `CardCapture` to take payments; `CardField` is for layouts or flows that only need card validation state.
+
+```tsx
+import { CardField, CardFieldMethods } from "@sfpy/react-native";
+
+const ref = useRef<CardFieldMethods>(null);
+
+<CardField
+  ref={ref}
+  onCardChange={card => console.log(card.complete, card.brand, card.last4)}
+  onFocus={field => console.log("focused", field)} // "CardNumber" | "ExpiryDate" | "Cvc"
+  onBlur={() => console.log("blurred")}
+  style={{ height: 120 }}
+/>;
+```
+
+| Prop | Type | Description |
+|---|---|---|
+| `onCardChange` | `(card: CardFieldDetails) => void` | Called as the customer types. |
+| `onFocus` | `(field: CardFieldFocusField) => void` | Called when an input gains focus. |
+| `onBlur` | `() => void` | Called when the field loses focus. |
+| `disabled` | `boolean` | Disables the inputs. |
+| `autofocus` | `boolean` | Focuses the card number input when the view appears. |
+
+The ref exposes `focus()`, `blur()` and `clear()`.
+
+## SafepayPayerAuthentication
+
+Runs device data collection and 3-D Secure in a web view, using the values in the surrounding `SafepayContext`. When you use `CardCapture`, `deviceDataCollectionJWT` and `deviceDataCollectionURL` come from `onProceedToAuthentication` (see [Accepting a card payment](#accepting-a-card-payment)).
 
 ```typescript
 export default function Index() {
@@ -31,7 +238,7 @@ export default function Index() {
         clientSecret: "0wX...A==",
         // this is the payment tracker token
         tracker: "track_c22f4888-dd09-4b99-83ec-e65dd9fc7b88",
-        // these are the JWT and URL for Cardinal, provided by the payment API
+        // accessToken and deviceDataCollectionURL from CardCapture's onProceedToAuthentication
         deviceDataCollectionJWT: "eys...f84",
         deviceDataCollectionURL: "https://centinelapistag.cardinalcommerce.com/V1/Cruise/Collect",
         // this is the address of the customer (this is optional)
@@ -67,11 +274,11 @@ export default function Index() {
 };
 ```
 
-### SafepayPayerAuthentication Props
+### Props
 
 | Property | Type | Description |
 |---|---|---|
-| environment | `'development' \| 'production' \| 'sandbox' \| 'local'` | Environment setting |
+| environment | `ENVIRONMENT` | `LOCAL`, `DEVELOPMENT`, `SANDBOX` (default) or `PRODUCTION` |
 | doCaptureOnAuthorization | boolean | Enables capture during authorization |
 | doCardOnFile | boolean | Enables card-on-file during authorization |
 | onPayerAuthenticationSuccess | function | Atoms-compatible callback for successful 3DS completion |
@@ -87,7 +294,7 @@ export default function Index() {
 | onPayerAuthEnrollmentUnavailable | function | Deprecated alias for `onPayerAuthenticationUnavailable` |
 | onPayerAuthEnrollmentFailure | function | Deprecated alias for `onPayerAuthenticationUnavailable` |
 
-### SafepayPayerAuthentication Callbacks
+### Callbacks
 
 The component accepts atoms-compatible callbacks and keeps the older React Native callback names for backward compatibility.
 
@@ -194,7 +401,7 @@ Deprecated callback payload:
 ```
 
 #### onPayerAuthEnrollmentFailure (deprecated)
-**Deprecated.** Use `onPayerAuthEnrollmentUnavailable` instead. This callback still fires for backward compatibility with the same payload.
+**Deprecated.** Use `onPayerAuthenticationUnavailable` instead. This callback still fires for backward compatibility with the same payload.
 
 #### onSafepayError
 Called when an error with Safepay occurs. Example response:
