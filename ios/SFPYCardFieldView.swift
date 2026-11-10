@@ -1,18 +1,17 @@
-import Foundation
-import React
+import ExpoModulesCore
 import SafepayiOSSDK
 import UIKit
 
-@objc(SFPYCardFieldView)
-class SFPYCardFieldView: UIView {
-    @objc var onCardChange: RCTDirectEventBlock?
-    @objc var onFocusChange: RCTDirectEventBlock?
-    @objc var disabled: Bool = false {
+class SFPYCardFieldView: ExpoView {
+    let onCardChange = EventDispatcher()
+    let onFocusChange = EventDispatcher()
+
+    var disabled: Bool = false {
         didSet {
             cardFieldView.isUserInteractionEnabled = !disabled
         }
     }
-    @objc var autofocus: Bool = false {
+    var autofocus: Bool = false {
         didSet {
             if autofocus {
                 cardFieldView.focus()
@@ -22,25 +21,20 @@ class SFPYCardFieldView: UIView {
 
     private let cardFieldView = SafepayCardFieldView()
 
-    override init(frame: CGRect) {
-        super.init(frame: frame)
+    required init(appContext: AppContext? = nil) {
+        super.init(appContext: appContext)
         setupView()
     }
 
-    required init?(coder: NSCoder) {
-        super.init(coder: coder)
-        setupView()
-    }
-
-    @objc func focus() {
+    func focus() {
         cardFieldView.focus()
     }
 
-    @objc func blur() {
+    func blur() {
         cardFieldView.blur()
     }
 
-    @objc func clear() {
+    func clear() {
         cardFieldView.clear()
     }
 
@@ -86,10 +80,10 @@ class SFPYCardFieldView: UIView {
             card["expiryYear"] = NSNull()
         }
 
-        onCardChange?(["card": card])
+        onCardChange(["card": card])
     }
 
     private func emitFocusChange(_ focus: SafepayCardFieldFocusField?) {
-        onFocusChange?(["focusedField": focus?.rawValue ?? ""])
+        onFocusChange(["focusedField": focus?.rawValue ?? ""])
     }
 }

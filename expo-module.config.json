@@ -1,0 +1,13 @@
+{
+  "platforms": ["ios", "android"],
+  "apple": {
+    "podspecPath": "sfpy-react-native.podspec",
+    "modules": ["SFPYCardFieldModule", "SFPYCardCaptureModule"]
+  },
+  "android": {
+    "modules": [
+      "com.sfpy.reactnative.SFPYCardFieldModule",
+      "com.sfpy.reactnative.SFPYCardCaptureModule"
+    ]
+  }
+}

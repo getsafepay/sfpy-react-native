@@ -1,13 +1,15 @@
 package com.sfpy.reactnative
 
-import android.widget.FrameLayout
+import android.content.Context
 import com.android.safepay.network.error.PaymentError
 import com.android.safepay.network.ui.card.SafepayCardCaptureConfiguration
 import com.android.safepay.network.ui.card.SafepayCardCaptureController
 import com.android.safepay.network.ui.card.SafepayCardCaptureEnvironment
 import com.android.safepay.network.ui.card.SafepayCardCaptureResult
 import com.android.safepay.network.ui.card.SafepayCardFieldView
-import com.facebook.react.uimanager.ThemedReactContext
+import expo.modules.kotlin.AppContext
+import expo.modules.kotlin.viewevent.EventDispatcher
+import expo.modules.kotlin.views.ExpoView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -16,20 +18,18 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class SFPYCardCaptureView(
-    private val reactContext: ThemedReactContext,
-) : FrameLayout(reactContext) {
-    interface Listener {
-        fun onReady()
-        fun onCardChange(details: SafepayCardFieldView.CardFieldDetails)
-        fun onValidated()
-        fun onError(code: String?, message: String)
-        fun onProceedToAuthentication(result: SafepayCardCaptureResult)
-    }
+    context: Context,
+    appContext: AppContext,
+) : ExpoView(context, appContext) {
+    private val onReady by EventDispatcher()
+    private val onCardChange by EventDispatcher()
+    private val onValidated by EventDispatcher()
+    private val onError by EventDispatcher()
+    private val onProceedToAuthentication by EventDispatcher()
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-    private val cardFieldView = SafepayCardFieldView(reactContext)
+    private val cardFieldView = SafepayCardFieldView(context)
 
-    private var listener: Listener? = null
     private var controller: SafepayCardCaptureController? = null
     private var environment: String? = null
     private var authToken: String? = null
@@ -46,14 +46,10 @@ class SFPYCardCaptureView(
         cardFieldView.setOnCardChangeListener(
             object : SafepayCardFieldView.OnCardChangeListener {
                 override fun onCardChange(details: SafepayCardFieldView.CardFieldDetails) {
-                    listener?.onCardChange(details)
+                    this@SFPYCardCaptureView.onCardChange(mapOf("card" to details.toEventMap()))
                 }
             },
         )
-    }
-
-    fun setListener(listener: Listener?) {
-        this.listener = listener
     }
 
     fun setEnvironment(value: String?) {
@@ -84,7 +80,7 @@ class SFPYCardCaptureView(
     fun submit() {
         val controller = controller
         if (controller == null) {
-            listener?.onError(null, "CardCapture is missing required configuration.")
+            emitError(null, "CardCapture is missing required configuration.")
             return
         }
 
@@ -94,12 +90,12 @@ class SFPYCardCaptureView(
                     withContext(Dispatchers.IO) {
                         controller.submit()
                     }
-                listener?.onValidated()
-                listener?.onProceedToAuthentication(result)
+                onValidated(mapOf())
+                onProceedToAuthentication(mapOf("result" to result.toEventMap()))
             } catch (error: PaymentError) {
-                listener?.onError(error.code, error.msg)
+                emitError(error.code, error.msg)
             } catch (error: Exception) {
-                listener?.onError(null, error.localizedMessage ?: "Unknown error")
+                emitError(null, error.localizedMessage ?: "Unknown error")
             }
         }
     }
@@ -111,6 +107,13 @@ class SFPYCardCaptureView(
     override fun onDetachedFromWindow() {
         scope.cancel()
         super.onDetachedFromWindow()
+    }
+
+    private fun emitError(
+        code: String?,
+        message: String,
+    ) {
+        onError(mapOf("error" to mapOf("code" to code, "message" to message)))
     }
 
     private fun configureControllerIfPossible() {
@@ -148,7 +151,25 @@ class SFPYCardCaptureView(
 
         if (!didEmitReady) {
             didEmitReady = true
-            listener?.onReady()
+            // Props arrive before the view is mounted; an event sent then is dropped.
+            post { onReady(mapOf()) }
         }
     }
 }
+
+private fun SafepayCardCaptureResult.toEventMap(): Map<String, Any?> =
+    mapOf(
+        "accessToken" to accessToken,
+        "deviceDataCollectionURL" to deviceDataCollectionURL,
+        "cardinalJWT" to cardinalJWT,
+        "paymentMethod" to
+            mapOf(
+                "token" to paymentMethod.token,
+                "expirationMonth" to paymentMethod.expirationMonth,
+                "expirationYear" to paymentMethod.expirationYear,
+                "cardTypeCode" to paymentMethod.cardTypeCode,
+                "cardType" to paymentMethod.cardType,
+                "binNumber" to paymentMethod.binNumber,
+                "lastFour" to paymentMethod.lastFour,
+            ),
+    )

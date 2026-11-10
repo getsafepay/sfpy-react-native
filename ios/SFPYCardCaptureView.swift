@@ -1,41 +1,39 @@
-import Foundation
-import React
+import ExpoModulesCore
 import SafepayiOSSDK
 import UIKit
 
-@objc(SFPYCardCaptureView)
-class SFPYCardCaptureView: UIView {
-    @objc var onReady: RCTDirectEventBlock?
-    @objc var onCardChange: RCTDirectEventBlock?
-    @objc var onValidated: RCTDirectEventBlock?
-    @objc var onError: RCTDirectEventBlock?
-    @objc var onProceedToAuthentication: RCTDirectEventBlock?
+class SFPYCardCaptureView: ExpoView {
+    let onReady = EventDispatcher()
+    let onCardChange = EventDispatcher()
+    let onValidated = EventDispatcher()
+    let onError = EventDispatcher()
+    let onProceedToAuthentication = EventDispatcher()
 
-    @objc var environment: NSString? {
+    var environment: String? {
         didSet {
             configureControllerIfPossible()
         }
     }
 
-    @objc var authToken: NSString? {
+    var authToken: String? {
         didSet {
             configureControllerIfPossible()
         }
     }
 
-    @objc var tracker: NSString? {
+    var tracker: String? {
         didSet {
             configureControllerIfPossible()
         }
     }
 
-    @objc var disabled: Bool = false {
+    var disabled: Bool = false {
         didSet {
             cardFieldView.isUserInteractionEnabled = !disabled
         }
     }
 
-    @objc var autofocus: Bool = false {
+    var autofocus: Bool = false {
         didSet {
             if autofocus {
                 cardFieldView.focus()
@@ -48,17 +46,12 @@ class SFPYCardCaptureView: UIView {
     private var lastConfigurationKey: String?
     private var didEmitReady = false
 
-    override init(frame: CGRect) {
-        super.init(frame: frame)
+    required init(appContext: AppContext? = nil) {
+        super.init(appContext: appContext)
         setupView()
     }
 
-    required init?(coder: NSCoder) {
-        super.init(coder: coder)
-        setupView()
-    }
-
-    @objc func submit() {
+    func submit() {
         guard let controller = controller else {
             emitError(code: nil, message: "CardCapture is missing required configuration.")
             return
@@ -68,7 +61,7 @@ class SFPYCardCaptureView: UIView {
             do {
                 let result = try await controller.submit()
                 await MainActor.run {
-                    self?.onValidated?([:])
+                    self?.onValidated([:])
                     self?.emitProceed(result)
                 }
             } catch let error as PaymentError {
@@ -87,7 +80,7 @@ class SFPYCardCaptureView: UIView {
         }
     }
 
-    @objc func clear() {
+    func clear() {
         controller?.clear() ?? cardFieldView.clear()
     }
 
@@ -109,11 +102,11 @@ class SFPYCardCaptureView: UIView {
 
     private func configureControllerIfPossible() {
         guard
-            let environmentValue = environment as String?,
+            let environmentValue = environment,
             let environment = parseEnvironment(environmentValue),
-            let authTokenValue = authToken as String?,
+            let authTokenValue = authToken,
             !authTokenValue.isEmpty,
-            let trackerValue = tracker as String?,
+            let trackerValue = tracker,
             !trackerValue.isEmpty
         else {
             return
@@ -136,7 +129,10 @@ class SFPYCardCaptureView: UIView {
 
         if !didEmitReady {
             didEmitReady = true
-            onReady?([:])
+            // Props arrive before the view is mounted; an event sent then is dropped.
+            DispatchQueue.main.async { [weak self] in
+                self?.onReady([:])
+            }
         }
     }
 
@@ -167,7 +163,7 @@ class SFPYCardCaptureView: UIView {
             card["expiryYear"] = NSNull()
         }
 
-        onCardChange?(["card": card])
+        onCardChange(["card": card])
     }
 
     private func emitError(code: String?, message: String) {
@@ -176,7 +172,7 @@ class SFPYCardCaptureView: UIView {
             "message": message,
         ]
 
-        onError?(["error": errorPayload])
+        onError(["error": errorPayload])
     }
 
     private func emitProceed(_ result: SafepayCardCaptureResult) {
@@ -195,6 +191,6 @@ class SFPYCardCaptureView: UIView {
             ],
         ]
 
-        onProceedToAuthentication?(["result": resultPayload])
+        onProceedToAuthentication(["result": resultPayload])
     }
 }

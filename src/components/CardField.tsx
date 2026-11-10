@@ -6,13 +6,11 @@ import React, {
 } from 'react';
 import {
   NativeSyntheticEvent,
-  requireNativeComponent,
-  UIManager,
-  findNodeHandle,
   ViewProps,
   StyleProp,
   ViewStyle,
 } from 'react-native';
+import { requireNativeViewManager } from 'expo-modules-core';
 import type {
   CardFieldDetails,
   CardFieldFocusField,
@@ -37,23 +35,23 @@ export interface CardFieldProps extends ViewProps {
 }
 
 type NativeProps = ViewProps & {
+  ref?: React.Ref<NativeCardFieldRef>;
   autofocus?: boolean;
   disabled?: boolean;
   onCardChange?: (event: NativeSyntheticEvent<NativeCardChangeEvent>) => void;
   onFocusChange?: (event: NativeSyntheticEvent<NativeFocusChangeEvent>) => void;
 };
 
-const COMPONENT_NAME = 'SFPYCardField';
-const NativeCardField = requireNativeComponent<NativeProps>(COMPONENT_NAME);
-
-const dispatchCommand = (viewRef: React.Component<any> | null, command: string) => {
-  const node = viewRef ? findNodeHandle(viewRef) : null;
-  if (!node) return;
-  const config = UIManager.getViewManagerConfig(COMPONENT_NAME);
-  const commandId = config?.Commands?.[command];
-  if (commandId == null) return;
-  UIManager.dispatchViewManagerCommand(node, commandId, []);
+type NativeCardFieldRef = {
+  focus(): Promise<void>;
+  blur(): Promise<void>;
+  clear(): Promise<void>;
 };
+
+const NativeCardField: React.ComponentType<NativeProps> =
+  requireNativeViewManager('SFPYCardField');
+
+const ignore = () => {};
 
 export const CardField = forwardRef<CardFieldMethods, CardFieldProps>(
   (
@@ -67,7 +65,7 @@ export const CardField = forwardRef<CardFieldMethods, CardFieldProps>(
     },
     ref
   ) => {
-    const nativeRef = useRef<any>(null);
+    const nativeRef = useRef<NativeCardFieldRef>(null);
 
     const onCardChangeHandler = useCallback(
       (event: NativeSyntheticEvent<NativeCardChangeEvent>) => {
@@ -89,9 +87,15 @@ export const CardField = forwardRef<CardFieldMethods, CardFieldProps>(
     );
 
     useImperativeHandle(ref, () => ({
-      focus: () => dispatchCommand(nativeRef.current, 'focus'),
-      blur: () => dispatchCommand(nativeRef.current, 'blur'),
-      clear: () => dispatchCommand(nativeRef.current, 'clear'),
+      focus: () => {
+        nativeRef.current?.focus().catch(ignore);
+      },
+      blur: () => {
+        nativeRef.current?.blur().catch(ignore);
+      },
+      clear: () => {
+        nativeRef.current?.clear().catch(ignore);
+      },
     }));
 
     return (
