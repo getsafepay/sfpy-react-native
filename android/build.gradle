@@ -28,5 +28,6 @@ android {
 
 dependencies {
     implementation "com.facebook.react:react-native:+"
+    implementation project(":expo-modules-core")
     implementation project(":safePayCard")
 }

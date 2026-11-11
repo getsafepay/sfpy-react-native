@@ -4,10 +4,8 @@ import {
   ViewProps,
   StyleProp,
   ViewStyle,
-  UIManager,
-  findNodeHandle,
-  requireNativeComponent,
 } from 'react-native';
+import { requireNativeViewManager } from 'expo-modules-core';
 import type {
   CardCaptureError,
   CardCaptureProceedToAuthenticationData,
@@ -49,7 +47,13 @@ type NativeProceedEvent = {
   result: CardCaptureProceedToAuthenticationData;
 };
 
+type NativeCardCaptureRef = {
+  submit(): Promise<void>;
+  clear(): Promise<void>;
+};
+
 type NativeProps = ViewProps & {
+  ref?: React.Ref<NativeCardCaptureRef>;
   environment: string;
   authToken: string;
   tracker: string;
@@ -64,17 +68,10 @@ type NativeProps = ViewProps & {
   ) => void;
 };
 
-const COMPONENT_NAME = 'SFPYCardCapture';
-const NativeCardCapture = requireNativeComponent<NativeProps>(COMPONENT_NAME);
+const NativeCardCapture: React.ComponentType<NativeProps> =
+  requireNativeViewManager('SFPYCardCapture');
 
-const dispatchCommand = (viewRef: React.Component<any> | null, command: string) => {
-  const node = viewRef ? findNodeHandle(viewRef) : null;
-  if (!node) return;
-  const config = UIManager.getViewManagerConfig(COMPONENT_NAME);
-  const commandId = config?.Commands?.[command];
-  if (commandId == null) return;
-  UIManager.dispatchViewManagerCommand(node, commandId, []);
-};
+const ignore = () => {};
 
 export const CardCapture: React.FC<CardCaptureProps> = ({
   environment,
@@ -93,7 +90,7 @@ export const CardCapture: React.FC<CardCaptureProps> = ({
 }) => {
   void validationEvent;
 
-  const nativeRef = useRef<any>(null);
+  const nativeRef = useRef<NativeCardCaptureRef>(null);
   const [cardDetails, setCardDetails] = useState<CardFieldDetails | null>(null);
 
   const validate = useCallback(() => Boolean(cardDetails?.complete), [cardDetails]);
@@ -107,7 +104,7 @@ export const CardCapture: React.FC<CardCaptureProps> = ({
       return;
     }
 
-    dispatchCommand(nativeRef.current, 'submit');
+    nativeRef.current?.submit().catch(ignore);
   }, [onError, validate]);
 
   useImperativeHandle(
@@ -118,7 +115,7 @@ export const CardCapture: React.FC<CardCaptureProps> = ({
       fetchValidity: async () => validate(),
       clear: () => {
         setCardDetails(null);
-        dispatchCommand(nativeRef.current, 'clear');
+        nativeRef.current?.clear().catch(ignore);
       },
     }),
     [submit, validate]

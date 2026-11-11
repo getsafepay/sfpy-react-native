@@ -21,6 +21,8 @@ yarn add @sfpy/react-native react-native-webview
 
 The card inputs are native views, so the app needs a native build. **Expo Go is not supported.** With Expo, use a [development build](https://docs.expo.dev/develop/development-builds/introduction/) (`npx expo run:ios` / `npx expo run:android`).
 
+The native views are built with the [Expo Modules API](https://docs.expo.dev/modules/overview/), so they work on both the old and the New Architecture. Expo apps already include it. In a bare React Native app, install it first with `npx install-expo-modules@latest`.
+
 ## Native setup
 
 The card inputs come from Safepay's native SDKs, which you add to your app's iOS and Android projects.
